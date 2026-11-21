@@ -2,7 +2,8 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, require_roles
@@ -21,31 +22,19 @@ from app.services.audit import log_action
 router = APIRouter(prefix="/families", tags=["Families"])
 
 
-def get_family_in_tenant(
-    db: Session,
-    family_id: UUID,
-    tenant_id: UUID,
-):
-    family = db.query(Family).filter(
-        Family.id == family_id,
-        Family.tenant_id == tenant_id,
-    ).first()
-
-    if not family:
-        raise HTTPException(status_code=404, detail="Family not found")
-
-    return family
+from app.services.consent import (
+    create_consent_record,
+    withdraw_consent_record,
+    get_family_in_tenant,
+    verify_family_authority,
+)
 
 
 def verify_family_owner_or_officer(
     family: Family,
     user: User,
 ):
-    if user.role != "officer_admin" and family.created_by != user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="You can only manage your own family",
-        )
+    verify_family_authority(family, user)
 
 
 def get_accessible_family(
@@ -73,6 +62,7 @@ def get_accessible_family(
             Consent.family_id == family_id,
             Consent.status == "active",
             Consent.withdrawn_at.is_(None),
+            (Consent.recipient_id == user.id) | (Consent.recipient_id.is_(None)),
         ).first()
 
         if not consent:
@@ -85,6 +75,7 @@ def get_accessible_family(
         verify_family_owner_or_officer(family, user)
 
     return family
+
 
 
 @router.post(
@@ -125,6 +116,8 @@ def create_family(
 
 @router.get("/", response_model=list[FamilyResponse])
 def list_families(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     tenant_id: UUID = Depends(get_current_tenant),
@@ -135,22 +128,24 @@ def list_families(
         query = query.filter(Family.created_by == current_user.id)
 
     elif current_user.role == "community_helper":
-        assigned_ids = db.query(FamilyAssignment.family_id).filter(
+        assigned_ids = select(FamilyAssignment.family_id).filter(
             FamilyAssignment.helper_id == current_user.id,
             FamilyAssignment.is_active.is_(True),
-        ).subquery()
+        )
 
-        consented_ids = db.query(Consent.family_id).filter(
+        consented_ids = select(Consent.family_id).filter(
             Consent.status == "active",
             Consent.withdrawn_at.is_(None),
-        ).subquery()
+            (Consent.recipient_id == current_user.id) | (Consent.recipient_id.is_(None)),
+        )
 
         query = query.filter(
             Family.id.in_(assigned_ids),
             Family.id.in_(consented_ids),
         )
 
-    return query.all()
+
+    return query.order_by(Family.created_at.desc()).offset(offset).limit(limit).all()
 
 
 @router.get("/{family_id}", response_model=FamilyResponse)
@@ -175,31 +170,13 @@ def grant_consent(
     ),
     tenant_id: UUID = Depends(get_current_tenant),
 ):
-    family = get_family_in_tenant(db, family_id, tenant_id)
-    verify_family_owner_or_officer(family, current_user)
-
-    consent = Consent(
+    return create_consent_record(
+        db=db,
+        user=current_user,
+        tenant_id=tenant_id,
         family_id=family_id,
-        granted_by=current_user.id,
         scope=data.scope,
-        status="active",
     )
-
-    db.add(consent)
-    db.flush()
-
-    log_action(
-        db,
-        current_user.id,
-        "consent.granted",
-        "family",
-        family_id,
-        {"scope": data.scope},
-    )
-
-    db.commit()
-    db.refresh(consent)
-    return consent
 
 
 @router.post("/{family_id}/consent/withdraw")
@@ -241,6 +218,7 @@ def withdraw_consent(
     db.commit()
 
     return {"message": "Consent withdrawn successfully"}
+
 
 
 @router.post("/{family_id}/assign-helper")

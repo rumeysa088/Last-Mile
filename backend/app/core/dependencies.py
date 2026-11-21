@@ -1,4 +1,5 @@
 
+import jwt
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -10,11 +11,11 @@ from app.db.session import get_db
 from app.models.models import User
 
 
-bearer_scheme = HTTPBearer()
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
     """Retrieve the authenticated user from the database."""
@@ -25,10 +26,13 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    if credentials is None:
+        raise credentials_exception
+
     try:
         payload = decode_access_token(credentials.credentials)
         user_id = UUID(payload.get("sub"))
-    except Exception:
+    except (jwt.InvalidTokenError, ValueError, TypeError):
         raise credentials_exception
 
     user = db.query(User).filter(User.id == user_id).first()

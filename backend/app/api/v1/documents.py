@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -16,8 +15,9 @@ from app.api.v1.cases import verify_case_access
 
 router = APIRouter(prefix="/cases", tags=["Documents"])
 
-STORAGE_DIR = Path(__file__).resolve().parents[4] / "uploads"
-MAX_FILE_SIZE = 10 * 1024 * 1024
+STORAGE_DIR = Path(__file__).resolve().parents[3] / "storage" / "documents"
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 ALLOWED_CONTENT_TYPES = {
     "application/pdf",
     "image/jpeg",
@@ -25,19 +25,33 @@ ALLOWED_CONTENT_TYPES = {
 }
 
 
+def detect_valid_file_type(content: bytes) -> str | None:
+    """Verify file type through magic bytes/signatures."""
+    if content.startswith(b"%PDF"):
+        return "application/pdf"
+    if content.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    return None
+
+
 def get_authorized_case(
     db: Session,
     case_id: UUID,
     tenant_id: UUID,
     user: User,
-):
+) -> Case:
     case = db.query(Case).filter(
         Case.id == case_id,
         Case.tenant_id == tenant_id,
     ).first()
 
     if not case:
-        raise HTTPException(status_code=404, detail="Case not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Case not found",
+        )
 
     verify_case_access(db, case, user)
     return case
@@ -57,25 +71,26 @@ async def upload_document(
 ):
     case = get_authorized_case(db, case_id, tenant_id, current_user)
 
-    if current_user.role == "community_helper":
-        raise HTTPException(
-            status_code=403,
-            detail="Helpers cannot upload case documents",
-        )
-
-    if file.content_type not in ALLOWED_CONTENT_TYPES:
-        raise HTTPException(
-            status_code=415,
-            detail="Only PDF, JPEG and PNG files are allowed",
-        )
-
     content = await file.read(MAX_FILE_SIZE + 1)
 
     if not content:
-        raise HTTPException(status_code=400, detail="File is empty")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File is empty",
+        )
 
     if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="File exceeds 10 MB limit")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds 10 MB limit",
+        )
+
+    detected_type = detect_valid_file_type(content)
+    if not detected_type:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="File content does not match allowed types (PDF, JPEG, PNG)",
+        )
 
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -90,7 +105,7 @@ async def upload_document(
             case_id=case.id,
             uploaded_by=current_user.id,
             filename=safe_name,
-            content_type=file.content_type,
+            content_type=detected_type,
             storage_key=storage_key,
         )
 
@@ -98,12 +113,12 @@ async def upload_document(
         db.flush()
 
         log_action(
-            db,
-            current_user.id,
-            "document.uploaded",
-            "document",
-            document.id,
-            {"case_id": str(case.id), "filename": safe_name},
+            db=db,
+            actor_id=current_user.id,
+            action="document.uploaded",
+            entity_type="document",
+            entity_id=document.id,
+            details={"case_id": str(case.id), "filename": safe_name},
         )
 
         db.commit()
@@ -133,7 +148,7 @@ def list_documents(
 
     return db.query(Document).filter(
         Document.case_id == case.id
-    ).all()
+    ).order_by(Document.created_at.desc()).all()
 
 
 @router.get("/{case_id}/documents/{document_id}/download")
@@ -152,12 +167,28 @@ def download_document(
     ).first()
 
     if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
 
     file_path = STORAGE_DIR / document.storage_key
 
     if not file_path.is_file():
-        raise HTTPException(status_code=404, detail="Stored file not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Stored file not found",
+        )
+
+    log_action(
+        db=db,
+        actor_id=current_user.id,
+        action="document.downloaded",
+        entity_type="document",
+        entity_id=document.id,
+        details={"case_id": str(case.id), "filename": document.filename},
+    )
+    db.commit()
 
     return FileResponse(
         path=file_path,

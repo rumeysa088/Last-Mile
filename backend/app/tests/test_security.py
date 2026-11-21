@@ -1,5 +1,4 @@
 
-
 from uuid import UUID
 
 from app.models.models import (
@@ -259,7 +258,7 @@ def test_officer_can_publish_versioned_rules(
     assert first_rule_db.is_active is False
 
 
-def test_case_creation_generates_audit_log(
+def test_case_creation_generates_complete_audit_log(
     client,
     db_session,
     test_users,
@@ -277,12 +276,41 @@ def test_case_creation_generates_audit_log(
 
     assert response.status_code == 201
 
-    case_id = response.json()["id"]
+    case_id = UUID(response.json()["id"])
 
-    audit_entry = db_session.query(AuditLog).filter(
-        AuditLog.entity_id == UUID(case_id),
-        AuditLog.action == "case.created",
-    ).first()
+    # Every response should expose its request ID.
+    request_id = response.headers.get("X-Request-ID")
+
+    assert request_id is not None
+    assert len(request_id) > 0
+
+    audit_entry = (
+        db_session.query(AuditLog)
+        .filter(
+            AuditLog.entity_id == case_id,
+            AuditLog.action == "case.created",
+        )
+        .first()
+    )
 
     assert audit_entry is not None
+
+    # Actor information
     assert audit_entry.actor_id == test_users["citizen"].id
+    assert audit_entry.actor_role == "citizen"
+
+    # Tenant isolation information
+    assert audit_entry.tenant_id == test_users["tenant"].id
+
+    # Request traceability
+    assert audit_entry.request_id == request_id
+
+    # Event information
+    assert audit_entry.action == "case.created"
+    assert audit_entry.entity_type == "case"
+    assert audit_entry.outcome == "success"
+
+    # Change summary should contain field names, not just be empty.
+    assert audit_entry.change_summary == {
+        "changed_fields": ["title"]
+    }
