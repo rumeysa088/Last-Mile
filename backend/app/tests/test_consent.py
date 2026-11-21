@@ -197,3 +197,108 @@ def test_unrelated_consent_remains_active_when_one_is_withdrawn(client, db_sessi
 
     # Helper 2 remains authorized
     assert client.get(f"/api/v1/cases/{case.id}", headers=auth_header(helper2_token)).status_code == 200
+
+
+def test_helper_with_readonly_consent_scope_enforcement(client, db_session, test_users):
+    """Verifies that read_only consent permits reading but strictly blocks writes."""
+    family, case = setup_family_and_case(db_session, test_users)
+
+    # Assign helper to family
+    assignment = FamilyAssignment(
+        family_id=family.id,
+        helper_id=test_users["helper"].id,
+        assigned_by=test_users["citizen"].id,
+        is_active=True,
+    )
+    db_session.add(assignment)
+    db_session.commit()
+
+    citizen_token = get_token(client, "citizen@test.com")
+    helper_token = get_token(client, "helper@test.com")
+
+    # 1. Grant read_only consent
+    grant_resp = client.post(
+        "/api/v1/consents/",
+        json={
+            "family_id": str(family.id),
+            "recipient_id": str(test_users["helper"].id),
+            "purpose": "monitoring",
+            "scope": "read_only",
+        },
+        headers=auth_header(citizen_token),
+    )
+    assert grant_resp.status_code == 201
+    ro_consent_id = grant_resp.json()["id"]
+
+    # 2. Helper CAN read case
+    read_resp = client.get(
+        f"/api/v1/cases/{case.id}",
+        headers=auth_header(helper_token),
+    )
+    assert read_resp.status_code == 200
+
+    # 3. Helper CANNOT update case (403 Forbidden)
+    update_resp = client.patch(
+        f"/api/v1/cases/{case.id}",
+        json={"description": "Unauthorized helper update"},
+        headers=auth_header(helper_token),
+    )
+    assert update_resp.status_code == 403
+    assert "read_only" in update_resp.json()["detail"]
+    assert "error" in update_resp.json()
+
+    # 4. Helper CANNOT upload document (403 Forbidden)
+    upload_resp = client.post(
+        f"/api/v1/cases/{case.id}/documents",
+        files={"file": ("test.pdf", b"%PDF-1.4 test document content", "application/pdf")},
+        headers=auth_header(helper_token),
+    )
+    assert upload_resp.status_code == 403
+    assert "read_only" in upload_resp.json()["detail"]
+
+    # 5. Helper CANNOT create assisted case with read_only consent
+    assisted_resp = client.post(
+        "/api/v1/cases/",
+        json={"family_id": str(family.id), "title": "Assisted Case Title", "description": "desc"},
+        headers=auth_header(helper_token),
+    )
+    assert assisted_resp.status_code == 403
+    assert "read_only" in assisted_resp.json()["detail"]
+
+    # 6. Citizen withdraws read_only consent and grants read_write consent
+    client.post(f"/api/v1/consents/{ro_consent_id}/withdraw", headers=auth_header(citizen_token))
+
+    grant_rw_resp = client.post(
+        "/api/v1/consents/",
+        json={
+            "family_id": str(family.id),
+            "recipient_id": str(test_users["helper"].id),
+            "purpose": "full_assistance",
+            "scope": "read_write",
+        },
+        headers=auth_header(citizen_token),
+    )
+    assert grant_rw_resp.status_code == 201
+    rw_consent_id = grant_rw_resp.json()["id"]
+
+    # 7. Helper CAN now update case and upload document
+    update_ok = client.patch(
+        f"/api/v1/cases/{case.id}",
+        json={"description": "Authorized helper update with read_write consent"},
+        headers=auth_header(helper_token),
+    )
+    assert update_ok.status_code == 200
+    assert update_ok.json()["description"] == "Authorized helper update with read_write consent"
+
+    upload_ok = client.post(
+        f"/api/v1/cases/{case.id}/documents",
+        files={"file": ("verified.pdf", b"%PDF-1.4 verified citizen proof", "application/pdf")},
+        headers=auth_header(helper_token),
+    )
+    assert upload_ok.status_code == 201
+
+    # 8. Withdrawing consent immediately blocks both read and write again
+    client.post(f"/api/v1/consents/{rw_consent_id}/withdraw", headers=auth_header(citizen_token))
+
+    assert client.get(f"/api/v1/cases/{case.id}", headers=auth_header(helper_token)).status_code == 403
+    assert client.patch(f"/api/v1/cases/{case.id}", json={"description": "late update"}, headers=auth_header(helper_token)).status_code == 403

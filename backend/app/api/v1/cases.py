@@ -49,6 +49,7 @@ def verify_case_access(
     db: Session,
     case: Case,
     user: User,
+    required_scope: str = "read_only",
 ) -> None:
     if user.role == "officer_admin":
         return
@@ -93,6 +94,12 @@ def verify_case_access(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Active consent is required to access this case",
+            )
+
+        if required_scope in ("read_write", "write") and consent.scope == "read_only":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Consent scope 'read_only' does not permit modifying this resource",
             )
 
         assignment = db.query(FamilyAssignment).filter(
@@ -178,6 +185,12 @@ def create_case(
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Active family assignment and consent are required to submit assisted applications",
+                )
+
+            if consent.scope == "read_only":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Consent scope 'read_only' does not permit submitting assisted applications",
                 )
     else:
         if current_user.role == "community_helper":
@@ -286,7 +299,7 @@ def update_case(
     tenant_id: UUID = Depends(get_current_tenant),
 ):
     case = get_case_in_tenant(db, case_id, tenant_id)
-    verify_case_access(db, case, current_user)
+    verify_case_access(db, case, current_user, required_scope="read_write")
 
     updates = data.model_dump(exclude_unset=True)
 

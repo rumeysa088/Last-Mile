@@ -30,10 +30,17 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
         current_req_id = _request_id.get() or request.headers.get("X-Request-ID")
+        error_payload = {
+            "code": exc.code,
+            "message": exc.message,
+            "details": exc.details,
+            "request_id": current_req_id,
+        }
         content = {
             "detail": exc.message,
             "code": exc.code,
             "request_id": current_req_id,
+            "error": error_payload,
         }
         if exc.details is not None:
             content["details"] = exc.details
@@ -49,12 +56,19 @@ def register_error_handlers(app: FastAPI) -> None:
         current_req_id = _request_id.get() or request.headers.get("X-Request-ID")
         detail = exc.detail
         code = f"HTTP_{exc.status_code}"
+        error_payload = {
+            "code": code,
+            "message": detail if isinstance(detail, str) else "HTTP error",
+            "details": detail if not isinstance(detail, str) else None,
+            "request_id": current_req_id,
+        }
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "detail": detail,
                 "code": code,
                 "request_id": current_req_id,
+                "error": error_payload,
             },
             headers=getattr(exc, "headers", None),
         )
@@ -72,13 +86,21 @@ def register_error_handlers(app: FastAPI) -> None:
             msg = err.get("msg", "Invalid value")
             messages.append(f"{loc}: {msg}" if loc else msg)
 
+        summary = "; ".join(messages) if messages else "Validation failed"
+        error_payload = {
+            "code": "VALIDATION_ERROR",
+            "message": summary,
+            "details": errors,
+            "request_id": current_req_id,
+        }
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
-                "detail": "; ".join(messages) if messages else "Validation failed",
+                "detail": summary,
                 "code": "VALIDATION_ERROR",
                 "errors": errors,
                 "request_id": current_req_id,
+                "error": error_payload,
             },
         )
 
@@ -87,11 +109,18 @@ def register_error_handlers(app: FastAPI) -> None:
         request: Request, exc: Exception
     ) -> JSONResponse:
         current_req_id = _request_id.get() or request.headers.get("X-Request-ID")
+        error_payload = {
+            "code": "INTERNAL_SERVER_ERROR",
+            "message": "An internal server error occurred.",
+            "details": None,
+            "request_id": current_req_id,
+        }
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "detail": "An internal server error occurred.",
                 "code": "INTERNAL_SERVER_ERROR",
                 "request_id": current_req_id,
+                "error": error_payload,
             },
         )

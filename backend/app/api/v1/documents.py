@@ -41,6 +41,7 @@ def get_authorized_case(
     case_id: UUID,
     tenant_id: UUID,
     user: User,
+    required_scope: str = "read_only",
 ) -> Case:
     case = db.query(Case).filter(
         Case.id == case_id,
@@ -53,7 +54,7 @@ def get_authorized_case(
             detail="Case not found",
         )
 
-    verify_case_access(db, case, user)
+    verify_case_access(db, case, user, required_scope=required_scope)
     return case
 
 
@@ -69,7 +70,7 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
     tenant_id: UUID = Depends(get_current_tenant),
 ):
-    case = get_authorized_case(db, case_id, tenant_id, current_user)
+    case = get_authorized_case(db, case_id, tenant_id, current_user, required_scope="read_write")
 
     content = await file.read(MAX_FILE_SIZE + 1)
 

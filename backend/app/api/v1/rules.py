@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user, require_roles
 from app.core.tenant import get_current_tenant
 from app.db.session import get_db
-from app.models.models import PlatformRule, RuleEvaluation, RuleSet, RuleVersion, User
+from app.models.models import Case, PlatformRule, RuleEvaluation, RuleSet, RuleVersion, User
 from app.schemas.rules import (
     EvaluationRequest,
     EvaluationResponse,
@@ -208,6 +208,17 @@ def publish_rule_version(
             detail="Rule version not found",
         )
 
+    # Tenant isolation check: officer can only publish versions of their tenant's rule sets or global rule sets
+    rule_set = db.query(RuleSet).filter(
+        RuleSet.id == version.rule_set_id,
+    ).first()
+
+    if not rule_set or (rule_set.tenant_id is not None and rule_set.tenant_id != tenant_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to publish rule versions for another tenant",
+        )
+
     if version.status == "published":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -285,6 +296,34 @@ def get_evaluation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Rule evaluation record not found",
         )
+
+    # Tenant isolation and access verification
+    if evaluation.case_id:
+        case = db.query(Case).filter(Case.id == evaluation.case_id).first()
+        if not case or case.tenant_id != tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Rule evaluation record not found",
+            )
+        from app.api.v1.cases import verify_case_access
+        verify_case_access(db, case, current_user, required_scope="read_only")
+    else:
+        rule_set = (
+            db.query(RuleSet)
+            .join(RuleVersion, RuleVersion.rule_set_id == RuleSet.id)
+            .filter(RuleVersion.id == evaluation.rule_version_id)
+            .first()
+        )
+        if rule_set and rule_set.tenant_id is not None and rule_set.tenant_id != tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Rule evaluation record not found",
+            )
+        if current_user.role != "officer_admin" and evaluation.evaluated_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this evaluation record",
+            )
 
     return evaluation
 
