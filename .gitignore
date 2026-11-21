@@ -1,4 +1,5 @@
-﻿# Python
+﻿
+# Python
 __pycache__/
 *.py[cod]
 .venv/
@@ -13,7 +14,7 @@ dist/
 .vite/
 *.log
 
-# Env
+# Environment variables
 .env
 .env.local
 .env.*.local
@@ -23,6 +24,10 @@ backend/storage/documents/*
 backend/storage/chroma/*
 !backend/storage/documents/.gitkeep
 !backend/storage/chroma/.gitkeep
+
+# Uploaded files
+/uploads/
+/backend/uploads/
 
 # OS / editor
 .DS_Store
