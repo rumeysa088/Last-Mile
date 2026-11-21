@@ -1,0 +1,121 @@
+// Shapes the citizen/helper UI expects from A's backend.
+// PROPOSED until A publishes docs/api-contract.md. Keep snake_case to match the API.
+// AI shapes mirror B's backend/app/services/ai/schemas.py exactly.
+
+export type Role = 'citizen' | 'community_helper' | 'officer_admin'
+
+export interface Me {
+  id: string
+  email: string
+  role: Role
+  full_name: string
+  tenant_id: string
+  family_id?: string | null // set for citizens
+}
+
+export type CaseStatus = 'draft' | 'pending' | 'info_needed' | 'approved' | 'rejected'
+export type CaseRoute = 'ready' | 'more_info' | 'human_review' | null
+
+export type IncomeBand = 'lt_20k' | '20k_35k' | '35k_50k' | 'gt_50k'
+export type HouseholdSituation = 'widow' | 'disability' | 'elderly' | 'none'
+
+export interface CaseCreate {
+  program_code: string
+  family_id: string | null
+  applicant_name: string
+  cnic: string // synthetic only, format 12345-1234567-1
+  phone: string
+  district: string
+  household_size: number
+  household_situation: HouseholdSituation
+  monthly_income_pkr: number | null // null when the person only picked a band
+  income_band: IncomeBand
+  submitted_via: 'self' | 'helper'
+  voice_used: boolean
+}
+
+export interface StatusEvent {
+  status: CaseStatus | 'submitted' | 'document_added' | 'routed'
+  at: string
+  actor: string // 'you', 'helper: <name>', 'system', 'officer'
+  note: string // plain words, safe to show to the citizen
+}
+
+export interface Source { title: string; identifier: string; chunk_id: string }
+
+export interface CitizenCase {
+  id: string
+  reference: string
+  program_code: string
+  applicant_name: string
+  family_id: string | null
+  status: CaseStatus
+  route: CaseRoute
+  ai_confidence: number | null
+  user_explanation: string // simple reason for the citizen
+  reasons: string[]
+  missing_fields: string[]
+  rule_version_id: string | null
+  sources: Source[]
+  history: StatusEvent[]
+  submitted_at: string
+  submitted_by: string
+  documents: { id: string; kind: string; quality: string }[]
+  idempotent_replay?: boolean
+}
+
+export interface Paged<T> { items: T[]; total: number; page: number; page_size: number }
+
+export interface Family {
+  id: string
+  head_name: string
+  head_name_ur: string
+  district: string
+  members_count: number
+  cnic_last4: string
+  consent_status: 'active' | 'withdrawn' | 'none'
+  latest_case_status: CaseStatus | null
+  possible_duplicates: string[] // family ids with a similar name. Never merged automatically.
+}
+
+export interface Consent {
+  id: string
+  family_id: string
+  purpose: string
+  data_scope: string[]
+  recipient_type: 'community_helper' | 'department'
+  recipient_id: string
+  recipient_name: string
+  status: 'active' | 'withdrawn'
+  granted_at: string
+  withdrawn_at: string | null
+}
+
+export interface AccessEvent { at: string; who: string; action: string }
+
+// --- AI (B) ---
+export type Verdict = 'suspicious' | 'likely_legitimate' | 'unknown'
+export interface AIResult {
+  result: Verdict
+  confidence: number
+  explanation: string
+  evidence: string[]
+  safe_next_steps: string[]
+  sources: Source[]
+  model_version: string
+  requires_human_review: boolean
+}
+export interface FieldResult { name: string; value: string | null; status: 'ok' | 'missing' | 'uncertain' }
+export interface OCRResult {
+  fields: FieldResult[]
+  raw_text: string
+  quality: 'good' | 'low' | 'unreadable' | 'unknown'
+  warnings: string[]
+  confidence: number
+  explanation: string
+  model_version: string
+  requires_human_review: boolean
+  identity_verified: false
+}
+
+export interface ApiErrorBody { error: { code: string; message: string; details?: unknown; request_id?: string } }

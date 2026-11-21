@@ -1,4 +1,3 @@
-@'
 // frontend/src/pages/admin/RuleVersionHistory.tsx
 import type { RuleVersion } from '../../api/client'
 
@@ -43,4 +42,3 @@ export default function RuleVersionHistory({ history, onPublish }: Props) {
     </div>
   )
 }
-'@ | Set-Content -Encoding UTF8 frontend\src\pages\admin\RuleVersionHistory.tsx

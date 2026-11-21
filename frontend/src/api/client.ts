@@ -1,5 +1,14 @@
 // frontend/src/api/client.ts
 // Shared HTTP client. Coordinates with C.
+// C additions: exported http() with Idempotency-Key + NetworkError, Me type, and D's mocks now
+// read/write the shared mock DB (mockServer.ts) so citizen cases reach the officer queue and
+// published rules drive new citizen cases. Officer UI code is unchanged.
+import { ApiError, NetworkError } from '../lib/errors'
+import { getNetMode } from '../lib/net'
+import { mockDb, mock, type MockRule } from './mockServer'
+export type { Me } from './types'
+import type { Me } from './types'
+
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
 export const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? 'true') === 'true'
 
@@ -39,15 +48,24 @@ function getToken(): string | null {
   return localStorage.getItem('access_token')
 }
 
-async function http<T>(path: string, init: RequestInit = {}): Promise<T> {
+export { getToken }
+
+export async function http<T>(path: string, init: RequestInit & { idempotencyKey?: string } = {}): Promise<T> {
   const headers = new Headers(init.headers)
-  headers.set('Content-Type', 'application/json')
+  if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   const token = getToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
-  const res = await fetch(`${BASE}${path}`, { ...init, headers })
+  if (init.idempotencyKey) headers.set('Idempotency-Key', init.idempotencyKey)
+  if (getNetMode() === 'offline') throw new NetworkError()
+  let res: Response
+  try {
+    res = await fetch(`${BASE}${path}`, { ...init, headers })
+  } catch {
+    throw new NetworkError()
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body?.error?.message ?? `HTTP ${res.status}`)
+    throw new ApiError(res.status, body?.error?.code ?? `HTTP_${res.status}`, body?.error?.message ?? `HTTP ${res.status}`, body?.error?.details)
   }
   return res.json() as Promise<T>
 }
@@ -58,21 +76,34 @@ const MOCK_CASES: CaseSummary[] = [
   { id: 'c-002', citizen_name: 'Muhammad Ali', program_code: 'BISP-2026', status: 'pending', route: 'more_info',    ai_confidence: 0.41, submitted_at: '2026-11-21T09:30:00Z', tenant_id: 't-punjab' },
   { id: 'c-003', citizen_name: 'Fatima Khan',  program_code: 'BISP-2026', status: 'pending', route: 'ready',         ai_confidence: 0.91, submitted_at: '2026-11-21T08:15:00Z', tenant_id: 't-punjab' },
 ]
-const MOCK_RULES: RuleVersion[] = [
-  { id: 'r-3', program_code: 'BISP-2026', version: 3, status: 'active', rules_json: { max_income_pkr: 50000, min_age: 18, requires_cnic: true }, created_by: 'admin@lastmile.pk', created_at: '2026-11-20T12:00:00Z', notes: 'Initial active rules' },
-  { id: 'r-2', program_code: 'BISP-2026', version: 2, status: 'archived', rules_json: { max_income_pkr: 45000, min_age: 18, requires_cnic: true }, created_by: 'admin@lastmile.pk', created_at: '2026-11-19T12:00:00Z', notes: 'Raised income ceiling' },
-]
+// Rules live in the shared mock DB so a rule published here is used by the next citizen case.
+const rulesStore = () => mockDb().rules as unknown as RuleVersion[]
+const persist = () => { try { localStorage.setItem('lm_mockdb_v2', JSON.stringify(mockDb())) } catch { /* ignore */ } }
+const MOCK_RULES = { find: (f: (r: RuleVersion) => boolean) => rulesStore().find(f), filter: (f: (r: RuleVersion) => boolean) => rulesStore().filter(f) }
+// Citizen/helper cases from the shared mock DB, shaped for the officer queue
+function citizenCases(): CaseSummary[] {
+  return mockDb().cases.map(c => ({ id: c.id, citizen_name: c.applicant_name, program_code: c.program_code, status: c.status, route: c.route,
+    ai_confidence: c.ai_confidence, submitted_at: c.submitted_at, tenant_id: 't-sindh-relief' }))
+}
+function citizenDetail(id: string): CaseDetail | null {
+  const c = mockDb().cases.find(x => x.id === id)
+  if (!c) return null
+  const r = mockDb().rules.find((x: MockRule) => x.id === c.rule_version_id)
+  return { ...citizenCases().find(x => x.id === id)!, ai_explanation: { summary: c.user_explanation, reasons: c.reasons, sources: c.sources.map(s => s.title) },
+    missing_fields: c.missing_fields, ocr_warnings: c.doc_quality && c.doc_quality !== 'good' ? ['CNIC photo: low quality, fields uncertain'] : [],
+    rule_version_id: r ? `${r.id} (v${r.version})` : c.rule_version_id, documents: c.documents.map(d => ({ id: d.id, kind: d.kind, url: '#' })) }
+}
 
 // ---------- PUBLIC API ----------
 export const api = {
   me: () =>
     USE_MOCK
-      ? Promise.resolve({ id: 'u-1', email: 'officer@lastmile.pk', role: 'officer_admin', full_name: 'Demo Officer', tenant_id: 't-punjab' })
-      : http<{ id: string; email: string; role: string; full_name: string; tenant_id: string }>('/auth/me'),
+      ? mock.me(getToken())
+      : http<Me>('/auth/me'),
 
   listCases: (params: { status?: CaseStatus; q?: string } = {}) => {
     if (USE_MOCK) {
-      let out = [...MOCK_CASES]
+      let out = [...citizenCases(), ...MOCK_CASES]
       if (params.status) out = out.filter(c => c.status === params.status)
       if (params.q) out = out.filter(c => c.citizen_name.toLowerCase().includes(params.q!.toLowerCase()))
       return Promise.resolve(out)
@@ -85,6 +116,8 @@ export const api = {
 
   getCase: (id: string) => {
     if (USE_MOCK) {
+      const real = citizenDetail(id)
+      if (real) return Promise.resolve(real)
       const base = MOCK_CASES.find(c => c.id === id) ?? MOCK_CASES[0]
       return Promise.resolve<CaseDetail>({
         ...base,
@@ -106,6 +139,10 @@ export const api = {
   },
 
   reviewCase: (id: string, decision: 'approve' | 'reject' | 'request_info', reason: string) => {
+    if (USE_MOCK) {
+      const shared = mock.officerReview(id, decision, reason)
+      if (shared) return Promise.resolve(shared)
+    }
     if (USE_MOCK) return Promise.resolve({ id, status: decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'info_needed', reason })
     return http<{ id: string; status: CaseStatus; reason: string }>(`/cases/${id}/review`, {
       method: 'POST',
@@ -115,7 +152,7 @@ export const api = {
 
   getActiveRule: (program: string) =>
     USE_MOCK
-      ? Promise.resolve(MOCK_RULES.find(r => r.status === 'active' && r.program_code === program) ?? MOCK_RULES[0])
+      ? Promise.resolve(MOCK_RULES.find(r => r.status === 'active' && r.program_code === program) ?? rulesStore()[0])
       : http<RuleVersion>(`/rules/active?program=${program}`),
 
   listRules: (program: string) =>
@@ -125,8 +162,10 @@ export const api = {
 
   createRuleDraft: (program: string, rules_json: Record<string, unknown>, notes?: string) => {
     if (USE_MOCK) {
-      const next = { id: `r-${MOCK_RULES.length + 1}`, program_code: program, version: MOCK_RULES.length + 1, status: 'draft' as const, rules_json, created_by: 'you@lastmile.pk', created_at: new Date().toISOString(), notes }
-      MOCK_RULES.unshift(next)
+      const all = rulesStore()
+      const v = Math.max(0, ...all.filter(r => r.program_code === program).map(r => r.version)) + 1
+      const next = { id: `r-${v}`, program_code: program, version: v, status: 'draft' as const, rules_json, created_by: 'officer@demo.lastmile', created_at: new Date().toISOString(), notes }
+      all.unshift(next); persist()
       return Promise.resolve(next)
     }
     return http<RuleVersion>(`/rules`, { method: 'POST', body: JSON.stringify({ program_code: program, rules_json, notes }) })
@@ -135,7 +174,7 @@ export const api = {
   publishRule: (id: string) => {
     if (USE_MOCK) {
       const r = MOCK_RULES.find(x => x.id === id)
-      if (r) { MOCK_RULES.forEach(x => { if (x.program_code === r.program_code && x.status === 'active') x.status = 'archived' }); r.status = 'active' }
+      if (r) { rulesStore().forEach(x => { if (x.program_code === r.program_code && x.status === 'active') x.status = 'archived' }); r.status = 'active'; persist() }
       return Promise.resolve(r!)
     }
     return http<RuleVersion>(`/rules/${id}/publish`, { method: 'POST' })

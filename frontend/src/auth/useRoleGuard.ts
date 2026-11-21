@@ -1,4 +1,3 @@
-@'
 // frontend/src/auth/useRoleGuard.ts
 // Member D. Co-owned with C (they own auth/ broadly — this file is only the
 // officer_admin route guard).
@@ -25,4 +24,3 @@ export function useRoleGuard(required: Me['role']) {
 
   return { me, error }
 }
-'@ | Set-Content -Encoding UTF8 frontend\src\auth\useRoleGuard.ts

@@ -1,4 +1,3 @@
-@'
 // frontend/src/pages/admin/RuleEditorPage.tsx
 import { useEffect, useState } from 'react'
 import { api, type RuleVersion } from '../../api/client'
@@ -66,4 +65,3 @@ export default function RuleEditorPage() {
     </div>
   )
 }
-'@ | Set-Content -Encoding UTF8 frontend\src\pages\admin\RuleEditorPage.tsx
