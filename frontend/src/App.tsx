@@ -9,6 +9,8 @@ import ScamCheckPage from './pages/citizen/ScamCheckPage'
 import ConsentPage from './pages/citizen/ConsentPage'
 import HelperDashboard from './pages/helper/HelperDashboard'
 import FamilyDetailPage, { HelperCasePage } from './pages/helper/FamilyDetailPage'
+
+// Your Member D Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ReviewQueuePage from './pages/admin/ReviewQueuePage'
 import CaseReviewPage from './pages/admin/CaseReviewPage'
@@ -18,6 +20,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      
+      {/* Citizen Routes */}
       <Route element={<ProtectedRoute roles={['citizen']} />}>
         <Route element={<AppShell />}>
           <Route path="/citizen" element={<CitizenHome />} />
@@ -28,6 +32,8 @@ export default function App() {
           <Route path="/citizen/consent" element={<ConsentPage />} />
         </Route>
       </Route>
+
+      {/* Helper Routes */}
       <Route element={<ProtectedRoute roles={['community_helper']} />}>
         <Route element={<AppShell />}>
           <Route path="/helper" element={<HelperDashboard />} />
@@ -37,7 +43,8 @@ export default function App() {
           <Route path="/helper/scam" element={<ScamCheckPage />} />
         </Route>
       </Route>
-      {/* D's combined officer_admin dashboard */}
+
+      {/* Member D: Officer/Admin Routes */}
       <Route element={<ProtectedRoute roles={['officer_admin']} />}>
         <Route element={<AppShell wide />}>
           <Route path="/admin" element={<AdminDashboard />} />
@@ -46,6 +53,8 @@ export default function App() {
           <Route path="/admin/rules" element={<RuleEditorPage />} />
         </Route>
       </Route>
+
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )
