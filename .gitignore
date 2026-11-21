@@ -1,0 +1,31 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+.vite/
+*.log
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Storage (local only)
+backend/storage/documents/*
+backend/storage/chroma/*
+!backend/storage/documents/.gitkeep
+!backend/storage/chroma/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
