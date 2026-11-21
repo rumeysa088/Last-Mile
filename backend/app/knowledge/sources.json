@@ -1,0 +1,19 @@
+{
+  "_note": "DEMO PLACEHOLDER CORPUS. Replace/extend with text copied from official public pages (NADRA, SBP/Raast, BISP...) and keep the real URL in 'identifier'.",
+  "sources": [
+    {"id": "demo-safety", "title": "Demo: Keep your PIN and OTP private",
+     "identifier": "demo://safety/pin-otp",
+     "chunks": [
+       "Official agencies and banks never ask you to share your PIN, OTP or password by SMS, WhatsApp or phone call.",
+       "If someone asks for your PIN or OTP, stop, do not reply, and contact the official helpline or website."]},
+    {"id": "demo-relief", "title": "Demo: Relief payment messages",
+     "identifier": "demo://safety/relief-payment",
+     "chunks": [
+       "Genuine relief payments are not released after you click a link in a message or pay a processing fee.",
+       "To check a relief payment, use the official website or visit an official office, and do not trust links sent by SMS."]},
+    {"id": "demo-documents", "title": "Demo: Photos of documents",
+     "identifier": "demo://help/document-photos",
+     "chunks": [
+       "Take document photos in good light, flat, with all four corners visible. Blurred or cropped photos may be sent for manual review."]}
+  ]
+}

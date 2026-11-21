@@ -1,0 +1,7 @@
+# merge into the shared backend/requirements.txt with Member A
+pydantic>=2
+httpx
+pytesseract
+Pillow
+pytest
+# later, optional: chromadb, opencv-python-headless
