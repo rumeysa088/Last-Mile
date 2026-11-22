@@ -9,10 +9,10 @@ import { useI18n, type TKey } from '../i18n'
 import { ApiError, isNetworkError } from '../lib/errors'
 
 const PERSONAS: { email: string; name: string; key: TKey; Icon: typeof Store }[] = [
-  { email: 'citizen@test.com', name: 'Zainab Bibi', key: 'persona_zainab', Icon: ShieldQuestion },
-  { email: 'citizen@test.com', name: 'Imran Qureshi', key: 'persona_imran', Icon: Store },
-  { email: 'helper@test.com', name: 'Rukhsana Baloch', key: 'persona_helper', Icon: HandHelping },
-  { email: 'officer@test.com', name: 'Demo Officer', key: 'persona_officer', Icon: Gavel },
+  { email: 'citizen@lastmile.com', name: 'Zainab Bibi', key: 'persona_zainab', Icon: ShieldQuestion },
+  { email: 'citizen@lastmile.com', name: 'Imran Qureshi', key: 'persona_imran', Icon: Store },
+  { email: 'helper@lastmile.com', name: 'Rukhsana Baloch', key: 'persona_helper', Icon: HandHelping },
+  { email: 'officer@lastmile.com', name: 'Demo Officer', key: 'persona_officer', Icon: Gavel },
 ]
 
 export default function LoginPage() {
@@ -31,6 +31,14 @@ export default function LoginPage() {
     catch (x) { setErr(isNetworkError(x) ? t('net_offline') : x instanceof ApiError ? x.message : String(x)) }
     finally { setBusy(false) }
   }
+
+  const handlePersonaClick = (p: { email: string }) => {
+    let pass = 'CitizenPass123!'
+    if (p.email.includes('helper')) pass = 'HelperPass123!'
+    if (p.email.includes('officer')) pass = 'OfficerPass123!'
+    go(p.email, pass)
+  }
+
   return (
     <div className="min-h-screen">
       <div className="bg-ink text-paper text-xs text-center px-3 py-1">{t('prototype')}</div>
@@ -41,7 +49,7 @@ export default function LoginPage() {
         <ul className="grid gap-3">
           {PERSONAS.map(p => (
             <li key={p.email + p.name}>
-              <button disabled={busy} onClick={() => go(p.email, 'TestPassword123!')} className="slip w-full flex items-center gap-4 p-4 text-start hover:border-teal disabled:opacity-50">
+              <button disabled={busy} onClick={() => handlePersonaClick(p)} className="slip w-full flex items-center gap-4 p-4 text-start hover:border-teal disabled:opacity-50">
                 <span className="w-14 h-14 rounded-2xl bg-teal-light text-teal-dark flex items-center justify-center shrink-0"><p.Icon size={30} aria-hidden /></span>
                 <span className="flex-1"><span className="block font-bold text-lg latin">{p.name}</span><span className="block text-ink-soft">{t(p.key)}</span></span>
               </button>
