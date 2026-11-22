@@ -184,8 +184,8 @@ export default function ApplyPage() {
             <h1 className="text-2xl font-bold">{t('sent_title')}</h1>
             <div>
               <div className="text-ink-soft">{t('sent_ref')}</div>
-              <div className="latin text-3xl font-bold tracking-wider my-2" dir="ltr">{done.c.reference}</div>
-              <ListenButton text={`${t('sent_ref')}: ${done.c.reference.split('').join(' ')}`} />
+              <div className="latin text-3xl font-bold tracking-wider my-2" dir="ltr">{done.c.reference ? done.c.reference.split('').join(' ') : done.c.id.slice(0, 8).toUpperCase()}</div>
+              <ListenButton text={`${t('sent_ref')}: ${done.c.reference ? done.c.reference.split('').join(' ') : String(done.c.id).slice(0, 8)}`} />
             </div>
             {done.c.idempotent_replay && <Notice tone="info">{t('replay_note')}</Notice>}
             <p className="text-start">{done.c.user_explanation}</p>
