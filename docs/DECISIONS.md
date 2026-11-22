@@ -24,7 +24,7 @@ Acting alone is worth it only if P(wrong) x 10 < 1, i.e. P(wrong) < 0.10 -> conf
 | >= 0.90 and no risk flags | auto_ok |
 | 0.60 - 0.90 | ask_more_proof |
 | < 0.60, unknown, conflict, low quality, or high-impact | escalate_to_human |
-The 10x figure is an assumption for the prototype; the admin can change it.
+The 10x figure is an assumption for the prototype. The thresholds (0.60 and 0.90) are constants in guardrails.py; they are not yet editable from the admin UI. Implemented in guardrails.py and unit-tested; the backend routes do not call it yet.
 
 ## 4. Model versioning
 Every output has `model_version` (`mock-v1`, `rules-fallback-v1`, provider model name, `rag-extractive-v1`, `anomaly-rules-v1`, `tesseract-x.y`, `stt-mock-v1`). Backend (A) stores it in the audit log.
@@ -34,8 +34,7 @@ Extractive only: the answer is copied from a trusted chunk, with title + identif
 
 ## 6. OCR and voice
 OCR reads text only; it never verifies identity. Blurry/small/dark images -> low quality -> human review. Sharpness threshold (60) and brightness limit (mean > 253, raised from 235 after a clean white page falsely failed) were tuned on synthetic images only. Tesseract English works; Urdu data is installed but NOT tested.
-Voice is MOCK. Languages really tested with a real engine: none yet. Urdu is NOT claimed; the user is offered text entry. Transcript always needs user confirmation.
-In the app, the microphone button uses the browser's own speech feature (built by C). My voice.py and A's /voice/stt route are mocks. No language has been tested with a real engine, so text entry is always offered.
+Voice: in the app, the microphone button uses the browser's own speech feature (built by C). My voice.py and A's /voice/stt route are mocks. No language has been tested with a real engine, so Urdu is NOT claimed and text entry is always offered. The transcript always needs user confirmation.
 
 ## 7. Evaluation (small, honest)
 `python -m app.services.ai.evaluate` on 31 hand-written messages (12 scams, 12 real, 7 ambiguous; mostly English, some Roman Urdu, one Urdu-script):
