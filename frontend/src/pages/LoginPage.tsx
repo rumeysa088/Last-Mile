@@ -18,6 +18,7 @@ const PERSONAS: { email: string; name: string; key: TKey; Icon: typeof Store }[]
   { email: 'officer@demo.lastmile', name: 'Demo Officer', key: 'persona_officer', Icon: Gavel },
 ] : [
   { email: 'citizen@test.com', name: 'Zainab Bibi', key: 'persona_zainab', Icon: ShieldQuestion },
+  { email: 'imran@test.com', name: 'Imran Qureshi', key: 'persona_imran', Icon: Store },
   { email: 'helper@test.com', name: 'Rukhsana Baloch', key: 'persona_helper', Icon: HandHelping },
   { email: 'officer@test.com', name: 'Demo Officer', key: 'persona_officer', Icon: Gavel },
 ]

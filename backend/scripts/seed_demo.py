@@ -16,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.core.security import hash_password  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 from app.models.family_assignment import FamilyAssignment  # noqa: E402
 from app.models.models import Consent, Family, RuleSet, RuleVersion, User  # noqa: E402
@@ -50,6 +51,14 @@ def main():
         citizen.full_name, helper.full_name, officer.full_name = "Zainab Bibi", "Rukhsana Baloch", "Demo Officer"
         tenant_id = citizen.tenant_id
 
+        # Second citizen for the scam-check story: Imran, a shopkeeper (same demo password)
+        imran = db.query(User).filter(User.email == "imran@test.com").first()
+        if not imran:
+            imran = User(tenant_id=tenant_id, email="imran@test.com", full_name="Imran Qureshi",
+                         hashed_password=hash_password("TestPassword123!"), role="citizen")
+            db.add(imran)
+            db.flush()
+
         def ensure_family(name, owner):
             fam = db.query(Family).filter(Family.tenant_id == tenant_id, Family.name == name, Family.created_by == owner.id).first()
             if not fam:
@@ -67,6 +76,7 @@ def main():
                 db.add(FamilyAssignment(family_id=fam.id, helper_id=helper.id, assigned_by=officer.id, is_active=True))
 
         ensure_share(ensure_family("Zainab Bibi", citizen), citizen)
+        ensure_family("Imran Qureshi", imran)  # his own family; not shared with the helper
         for name in HELPER_FAMILIES:
             ensure_share(ensure_family(name, officer), officer)
 
