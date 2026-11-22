@@ -28,7 +28,7 @@ class LLMClient:
     def __init__(self, mode: Optional[str] = None, api_key: Optional[str] = None,
                  base_url: Optional[str] = None, model: Optional[str] = None,
                  timeout: float = 8.0):
-        self.mode = (mode or os.getenv("LLM_MODE", "mock")).lower()
+        self.mode = (mode or os.getenv("LLM_PROVIDER") or os.getenv("LLM_MODE", "mock")).lower()
         self.api_key = api_key if api_key is not None else os.getenv("LLM_API_KEY")
         self.base_url = base_url or os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
         self.model = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
