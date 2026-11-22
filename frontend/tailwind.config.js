@@ -3,17 +3,23 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      // Soft-blob look (see the design canvas). Token NAMES are unchanged so no component logic changed:
+      // "teal" is now the navy primary, "saffron" the highlighter yellow.
       colors: {
-        ink: { DEFAULT: '#14213D', soft: '#4A5672', faint: '#8A93A6' },
-        paper: { DEFAULT: '#F1F5F2', deep: '#E3EBE6' },
-        teal: { DEFAULT: '#1F6F5C', dark: '#16503F', light: '#D6E9E2' },
-        saffron: { DEFAULT: '#F2A33A', dark: '#B86F0E', light: '#FDEBD0' },
-        danger: { DEFAULT: '#C2362B', light: '#F8DEDB' },
-        safe: { DEFAULT: '#2E7D4F', light: '#DCEFE3' },
-        unsure: { DEFAULT: '#6B5BA8', light: '#E7E3F4' },
+        ink: { DEFAULT: '#1D2433', soft: '#5B6272', faint: '#737A8A' },
+        paper: { DEFAULT: '#FFFFFF', deep: '#F4F5F7' },
+        teal: { DEFAULT: '#1D2433', dark: '#0E1320', light: '#E3F2F5' },
+        saffron: { DEFAULT: '#FFD84D', dark: '#7A5600', light: '#FFF4CC' },
+        coral: { DEFAULT: '#F28B82', light: '#FDE6E3' },
+        mist: { DEFAULT: '#B5DCE3', light: '#E3F2F5' },
+        sage: { DEFAULT: '#9DB59A', light: '#E6EEE4' },
+        line: '#E8EAEE',
+        danger: { DEFAULT: '#C2362B', light: '#FBE4E1' },
+        safe: { DEFAULT: '#2E6B45', light: '#E6EEE4' },
+        unsure: { DEFAULT: '#4B5BA8', light: '#E3F2F5' },
       },
       fontFamily: {
-        sans: ['"Atkinson Hyperlegible"', 'system-ui', 'sans-serif'],
+        sans: ['Poppins', '"Atkinson Hyperlegible"', 'system-ui', 'sans-serif'],
         urdu: ['"Noto Nastaliq Urdu"', '"Atkinson Hyperlegible"', 'serif'],
       },
       fontSize: {

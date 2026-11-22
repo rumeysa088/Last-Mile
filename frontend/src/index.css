@@ -1,3 +1,8 @@
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+@import '@fontsource/poppins/800.css';
 @import '@fontsource/atkinson-hyperlegible/400.css';
 @import '@fontsource/atkinson-hyperlegible/700.css';
 @import '@fontsource/noto-nastaliq-urdu/400.css';
@@ -12,24 +17,28 @@
   /* Nastaliq is tall: give it room so stacked letters never collide */
   [dir='rtl'] body, .font-urdu { font-family: 'Noto Nastaliq Urdu', 'Atkinson Hyperlegible', serif; }
   [dir='rtl'] p, [dir='rtl'] li, [dir='rtl'] label, [dir='rtl'] button, [dir='rtl'] a, [dir='rtl'] span, [dir='rtl'] h1, [dir='rtl'] h2, [dir='rtl'] h3 { line-height: 2.05; }
-  .latin { font-family: 'Atkinson Hyperlegible', system-ui, sans-serif; line-height: 1.45 !important; }
-  :focus-visible { outline: 3px solid #F2A33A; outline-offset: 3px; border-radius: 6px; }
+  .latin { font-family: Poppins, 'Atkinson Hyperlegible', system-ui, sans-serif; line-height: 1.45 !important; }
+  h1, h2 { letter-spacing: -0.02em; }
+  :focus-visible { outline: 3px solid #F28B82; outline-offset: 3px; border-radius: 6px; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 }
 
 @layer components {
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 min-h-[56px] font-bold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed select-none; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-6 min-h-[56px] font-semibold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed select-none; }
   .btn-primary { @apply btn bg-teal text-paper hover:bg-teal-dark; }
-  .btn-quiet { @apply btn bg-transparent text-ink border-2 border-ink/15 hover:border-ink/40; }
+  .btn-coral { @apply btn bg-coral text-ink hover:brightness-95; }
+  .btn-quiet { @apply btn bg-white text-ink border-2 border-line hover:border-ink/40; }
   .btn-danger { @apply btn bg-danger text-white hover:brightness-110; }
-  .btn-small { @apply inline-flex items-center gap-1.5 rounded-lg px-3 min-h-[44px] text-sm font-bold border-2 border-ink/15 hover:border-ink/40; }
-  .slip { @apply bg-white rounded-2xl border-2 border-ink/10; }
-  .field { @apply w-full rounded-xl border-2 border-ink/20 bg-white px-4 min-h-[60px] text-xl text-ink placeholder:text-ink-faint focus:border-teal focus:outline-none; }
-  .label { @apply block text-sm font-bold text-ink-soft mb-1; }
+  .btn-small { @apply inline-flex items-center gap-1.5 rounded-full px-4 min-h-[44px] text-sm font-semibold bg-white border-2 border-line hover:border-ink/40; }
+  .slip { @apply bg-white rounded-3xl border-2 border-line; }
+  .field { @apply w-full rounded-2xl border-[2.5px] border-ink/25 bg-white px-4 min-h-[60px] text-xl font-medium text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none; }
+  .label { @apply block text-sm font-semibold text-ink-soft mb-1; }
+  /* the yellow highlighter from the design */
+  .hl { background: linear-gradient(transparent 58%, #FFD84D 58%); padding: 0 0.12em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 }
 
 /* the one moment of motion: the voice button breathes while listening */
-@keyframes breathe { 0%,100% { box-shadow: 0 0 0 0 rgba(242,163,58,.55); } 50% { box-shadow: 0 0 0 18px rgba(242,163,58,0); } }
+@keyframes breathe { 0%,100% { box-shadow: 0 0 0 0 rgba(255,216,77,.7); } 50% { box-shadow: 0 0 0 18px rgba(255,216,77,0); } }
 .listening { animation: breathe 1.4s ease-in-out infinite; }
 
 /* Nastaliq has tall ascenders; one step down keeps Urdu headings in proportion with Latin */

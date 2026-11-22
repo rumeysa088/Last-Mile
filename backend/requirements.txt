@@ -21,6 +21,11 @@ pwdlib[argon2]
 # File uploads
 python-multipart
 
+# OCR (Member B, app/services/ai/ocr.py). pytesseract also needs the Tesseract binary
+# on the server; without it, quality checks still run and the document goes to a person.
+Pillow
+pytesseract
+
 # Testing
 pytest
 httpx

@@ -79,7 +79,9 @@ export const realCases = {
   uploadDocument: (caseId: string, _kind: string, file: Blob, quality: OCRResult['quality'], sharpness: number) => call((async (): Promise<OCRResult> => {
     const fd = new FormData()
     fd.append('file', file, (file as File).name || 'cnic.jpg')
-    await http<BackendDocument>(`/cases/${caseId}/documents`, { method: 'POST', body: fd })
+    const doc = await http<BackendDocument>(`/cases/${caseId}/documents`, { method: 'POST', body: fd })
+    // Server OCR (B's process_image) when available; it reads text only and never verifies identity.
+    if (doc.ocr) return { ...doc.ocr, identity_verified: false, requires_human_review: true }
     const low = quality !== 'good'
     return {
       fields: [], raw_text: '', quality, confidence: low ? 0.35 : 0.8, model_version: 'client-quality-check-v1', identity_verified: false,
@@ -146,8 +148,12 @@ const STEPS: Record<AIResult['result'], string[]> = {
 }
 
 export const realScam = {
-  check: (text: string, language: 'en' | 'ur') => call((async (): Promise<AIResult> => {
-    const r = await http<BackendScam>('/scam/check', { method: 'POST', body: JSON.stringify({ message: text, language }) })
-    return { ...r, safe_next_steps: STEPS[r.result] ?? STEPS.unknown, sources: r.sources.map((s, i) => ({ title: s, identifier: s, chunk_id: String(i) })) }
+  check: (message: string, language: 'en' | 'ur') => call((async (): Promise<AIResult> => {
+    const r = await http<BackendScam>('/scam/check', { method: 'POST', body: JSON.stringify({ message, language }) })
+    return {
+      ...r,
+      safe_next_steps: r.safe_next_steps?.length ? r.safe_next_steps : STEPS[r.result] ?? STEPS.unknown,
+      sources: r.sources.map((s, i) => (typeof s === 'string' ? { title: s, identifier: s, chunk_id: String(i) } : s)),
+    }
   })()),
 }

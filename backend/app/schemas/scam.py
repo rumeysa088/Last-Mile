@@ -11,6 +11,7 @@ class ScamCheckResponse(BaseModel):
     confidence: float
     explanation: str
     evidence: list[str] = Field(default_factory=list)
+    safe_next_steps: list[str] = Field(default_factory=list)
     sources: list[str] = Field(default_factory=list)
     model_version: str
     requires_human_review: bool

@@ -14,6 +14,7 @@ import Notice from '../../components/Notice'
 import OfflineBanner from '../../components/OfflineBanner'
 import Sheet from '../../components/Sheet'
 import VoiceButton from '../../components/VoiceButton'
+import { BLOB_FILL } from '../../components/Blob'
 import { useI18n, type TKey } from '../../i18n'
 import { ApiError, isNetworkError } from '../../lib/errors'
 import { checkImage, type Quality } from '../../lib/imageQuality'
@@ -87,7 +88,8 @@ export default function ApplyPage() {
   const [busy, setBusy] = useState(false)
   const [voiceUsed, setVoiceUsed] = useState(false)
   const [done, setDone] = useState<{ kind: 'sent'; c: CitizenCase; photoMsg?: string } | { kind: 'queued' } | null>(null)
-  const [readAloud, setReadAloud] = useState(() => localStorage.getItem(READ_ALOUD) === '1')
+  // On by default: people who cannot read should hear each question without finding a button first
+  const [readAloud, setReadAloud] = useState(() => localStorage.getItem(READ_ALOUD) !== '0')
   const inputRef = useRef<HTMLInputElement>(null)
 
   const defaults = useCallback((): Answers => isHelper && active
@@ -184,8 +186,8 @@ export default function ApplyPage() {
             <h1 className="text-2xl font-bold">{t('sent_title')}</h1>
             <div>
               <div className="text-ink-soft">{t('sent_ref')}</div>
-              <div className="latin text-3xl font-bold tracking-wider my-2" dir="ltr">{done.c.reference}</div>
-              <ListenButton text={`${t('sent_ref')}: ${done.c.reference.split('').join(' ')}`} />
+              <div className="latin text-3xl font-bold tracking-wider my-2" dir="ltr">{done.c.reference || done.c.id.slice(0, 8).toUpperCase()}</div>
+              <ListenButton text={`${t('sent_ref')}: ${done.c.reference ? done.c.reference.split('').join(' ') : String(done.c.id).slice(0, 8)}`} />
             </div>
             {done.c.idempotent_replay && <Notice tone="info">{t('replay_note')}</Notice>}
             <p className="text-start">{done.c.user_explanation}</p>
@@ -212,6 +214,10 @@ export default function ApplyPage() {
     household: ['q_household', 'q_household_hint'], situation: ['q_situation', null], income: ['q_income', 'q_income_hint'], photo: ['q_photo', 'q_photo_hint'], review: ['review_title', 'review_hint'],
   }
   const [qk, hk] = question[id]
+  // What is read aloud: the question, the hint, and for choice steps every option
+  const options = id === 'district' ? DISTRICTS : id === 'situation' ? SITUATIONS.map(x => t(`sit_${x.v}` as TKey))
+    : id === 'income' ? BANDS.map(b => t(`band_${b}` as TKey)) : []
+  const spoken = [t(qk), hk ? t(hk) : '', options.length ? `${t('choose_one')}. ${options.join('. ')}` : ''].filter(Boolean).join('. ')
 
   const onVoice = (text: string) => {
     setVoiceUsed(true)
@@ -243,13 +249,16 @@ export default function ApplyPage() {
 
       <section aria-labelledby="q">
         <div className="flex items-start gap-4 mb-5">
-          <span className="w-16 h-16 shrink-0 rounded-2xl bg-teal text-paper flex items-center justify-center"><Icon size={34} aria-hidden /></span>
+          <span className="relative w-[84px] h-[76px] shrink-0" aria-hidden="true">
+            <svg viewBox="0 0 132 120" className="absolute inset-0 w-full h-full"><path d="M70 2C108 0 132 28 128 64C124 100 92 120 56 116C20 112 0 86 4 54C8 22 34 4 70 2Z" fill={BLOB_FILL.sage} /></svg>
+            <span className="absolute top-2 start-2.5 w-[62px] h-[62px] rounded-full bg-mist flex items-center justify-center text-ink"><Icon size={32} /></span>
+          </span>
           <div className="flex-1">
-            <h1 id="q" className="text-2xl font-bold">{t(qk)}</h1>
+            <h1 id="q" className="text-2xl font-extrabold leading-tight">{t(qk)}</h1>
             {hk && <p className="text-ink-soft mt-1">{t(hk)}</p>}
           </div>
         </div>
-        <div className="mb-5"><ListenButton key={id + lang} text={`${t(qk)}. ${hk ? t(hk) : ''}`} auto={readAloud} /></div>
+        <div className="mb-5"><ListenButton key={id + lang} text={spoken} auto={readAloud} /></div>
 
         {id === 'name' && <Input ref={inputRef} label={t('q_name')} value={answers.applicant_name ?? ''} onChange={v => set({ applicant_name: v })} autoComplete="name" />}
         {id === 'cnic' && <Input ref={inputRef} label={t('q_cnic')} value={answers.cnic ?? ''} onChange={v => set({ cnic: formatCnic(v) })} inputMode="numeric" placeholder="42201-1234567-1" latin />}
@@ -307,13 +316,13 @@ export default function ApplyPage() {
       </section>
 
       {/* thumb-zone dock: Back · Speak · Next */}
-      <nav className="fixed bottom-0 inset-x-0 z-30 bg-white border-t-2 border-ink/10 shadow-[0_-6px_20px_rgba(20,33,61,0.08)]" aria-label="steps">
-        <div className="max-w-xl mx-auto flex items-center gap-3 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-          <button className="btn-quiet flex-1" onClick={() => go(-1)} disabled={step === 0}><ArrowLeft className="rtl:rotate-180" aria-hidden /> {t('back')}</button>
+      <nav className="fixed bottom-0 inset-x-0 z-30 px-3 pb-[max(12px,env(safe-area-inset-bottom))]" aria-label="steps">
+        <div className="max-w-xl mx-auto flex items-center gap-3 px-3 pt-3 pb-3 rounded-[28px] bg-white shadow-[0_10px_30px_rgba(29,36,51,0.16)]">
+          <button className="btn-quiet flex-1 min-w-0 px-3" onClick={() => go(-1)} disabled={step === 0}><ArrowLeft className="rtl:rotate-180" aria-hidden /> {t('back')}</button>
           {showVoice ? <VoiceButton kind={voiceKind} onConfirm={onVoice} onTypeInstead={() => inputRef.current?.focus()} /> : <span className="w-[76px]" />}
           {id === 'review'
-            ? <button className="btn-primary flex-1" disabled={busy} onClick={submit}>{busy ? t('sending') : t('submit')} <Send size={20} className="rtl:-scale-x-100" aria-hidden /></button>
-            : <button className="btn-primary flex-1" onClick={() => go(1)}>{t('next')} <ArrowRight className="rtl:rotate-180" aria-hidden /></button>}
+            ? <button className="btn-primary flex-1 min-w-0 px-3" disabled={busy} onClick={submit}>{busy ? t('sending') : t('submit')} <Send size={20} className="rtl:-scale-x-100" aria-hidden /></button>
+            : <button className="btn-primary flex-1 min-w-0 px-3" onClick={() => go(1)}>{t('next')} <ArrowRight className="rtl:rotate-180" aria-hidden /></button>}
         </div>
       </nav>
 

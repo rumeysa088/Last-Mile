@@ -50,6 +50,11 @@ export const ur: Dict = {
   tile_track: 'میری درخواستیں',
   tile_scam: 'کیا یہ پیغام سچا ہے؟',
   tile_consent: 'میرا ڈیٹا کون دیکھ سکتا ہے',
+  home_title_pre: 'جو',
+  home_title_hl: 'مدد',
+  home_title_post: 'آپ کا حق ہے، وہ لیں۔',
+  home_title_full: 'جو مدد آپ کا حق ہے، وہ لیں۔',
+  my_application: 'میری درخواست',
 
   step_of: 'قدم {n} از {total}',
   apply_for: '{name} کی درخواست',
@@ -112,6 +117,8 @@ export const ur: Dict = {
   voice_unsupported: 'اس براؤزر میں آواز سے لکھنا کام نہیں کرتا۔ لکھیں یا مددگار سے کہیں۔',
   voice_failed: 'صاف سنائی نہیں دیا۔ دوبارہ بولیں یا لکھیں۔',
   voice_no_urdu: 'اس فون میں اردو آواز نہیں، اس لیے انگریزی میں سنایا جا رہا ہے۔',
+  voice_via_hindi: 'اس فون میں اردو آواز نہیں، اس لیے ہندی آواز یہی الفاظ پڑھ رہی ہے۔',
+  choose_one: 'ان میں سے ایک چنیں',
 
   track_title: 'میری درخواستیں',
   track_empty: 'ابھی کوئی درخواست نہیں۔',

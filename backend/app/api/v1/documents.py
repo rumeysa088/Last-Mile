@@ -12,6 +12,23 @@ from app.models.models import Case, Document, User
 from app.schemas.documents import DocumentResponse
 from app.services.audit import log_action
 from app.api.v1.cases import verify_case_access
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def run_ocr(file_path: Path, content_type: str) -> dict | None:
+    """Member B's OCR + quality check. Never blocks the upload if it fails."""
+    if not content_type.startswith("image/"):
+        return None
+    try:
+        from app.services.ai.ocr import process_image
+        result = process_image(str(file_path)).model_dump()
+        result["raw_text"] = ""  # do not echo the full card text back; extracted fields are enough
+        return result
+    except Exception as exc:
+        logger.warning(f"OCR failed ({exc}); upload kept, a person will check the document.")
+        return None
 
 router = APIRouter(prefix="/cases", tags=["Documents"])
 
@@ -113,18 +130,22 @@ async def upload_document(
         db.add(document)
         db.flush()
 
+        ocr = run_ocr(file_path, detected_type)
         log_action(
             db=db,
             actor_id=current_user.id,
             action="document.uploaded",
             entity_type="document",
             entity_id=document.id,
-            details={"case_id": str(case.id), "filename": safe_name},
+            # audit the OCR outcome, never the extracted identity text
+            details={"case_id": str(case.id), "filename": safe_name,
+                     "ocr_quality": ocr["quality"] if ocr else None,
+                     "ocr_requires_human_review": ocr["requires_human_review"] if ocr else True},
         )
 
         db.commit()
         db.refresh(document)
-        return document
+        return DocumentResponse.model_validate(document).model_copy(update={"ocr": ocr})
 
     except Exception:
         db.rollback()

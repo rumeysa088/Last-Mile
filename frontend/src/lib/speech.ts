@@ -1,39 +1,98 @@
 // Browser text-to-speech and speech-to-text. Free, on-device where the phone supports it.
 // We are honest when a language is not available instead of pretending.
 
+import { en } from '../i18n/en'
+import { ur } from '../i18n/ur'
+import { urSpoken } from '../i18n/urSpoken'
+
 type Lang = 'en' | 'ur'
-const TTS_LANG: Record<Lang, string[]> = { 
-  ur: ['ur-PK', 'ur-IN', 'ur', 'hi-IN', 'hi'], // Added Hindi fallback
-  en: ['en-PK', 'en-IN', 'en-GB', 'en-US', 'en'] 
-}
+/** How the text was actually voiced, so the screen can say so honestly. */
+export type VoiceMode = 'native' | 'urdu_via_hindi' | 'urdu_via_english' | 'none'
 
 export const ttsSupported = () => typeof window !== 'undefined' && 'speechSynthesis' in window
 
-function pickVoice(lang: Lang): SpeechSynthesisVoice | null {
+const find = (prefixes: string[]) => {
   const voices = window.speechSynthesis.getVoices()
-  for (const code of TTS_LANG[lang]) {
-    const v = voices.find(x => x.lang.toLowerCase().startsWith(code.toLowerCase()))
+  for (const p of prefixes) {
+    const v = voices.find(x => x.lang.toLowerCase().replace('_', '-').startsWith(p))
     if (v) return v
   }
   return null
 }
+const urduVoice = () => find(['ur-pk', 'ur-in', 'ur'])
+const hindiVoice = () => find(['hi-in', 'hi'])
+const englishVoice = () => find(['en-in', 'en-pk', 'en-gb', 'en-us', 'en'])
 
-/** Speak text. Returns false if no voice for that language exists (caller can tell the user). */
-export function speak(text: string, lang: Lang, onEnd?: () => void): boolean {
-  if (!ttsSupported()) return false
-  window.speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance(text)
-  const v = pickVoice(lang)
-  if (v) u.voice = v
-  u.lang = v?.lang ?? (lang === 'ur' ? 'ur-PK' : 'en-US')
-  u.rate = 0.9
-  u.onend = () => onEnd?.()
-  u.onerror = () => onEnd?.()
-  window.speechSynthesis.speak(u)
-  return lang === 'en' || !!v
+/** Chrome fills the voice list asynchronously; the first tap often sees an empty list. */
+function voicesReady(timeoutMs = 1500): Promise<void> {
+  if (!ttsSupported() || window.speechSynthesis.getVoices().length) return Promise.resolve()
+  return new Promise(resolve => {
+    const done = () => { window.speechSynthesis.removeEventListener('voiceschanged', done); resolve() }
+    window.speechSynthesis.addEventListener('voiceschanged', done)
+    setTimeout(done, timeoutMs)
+  })
 }
-export function stopSpeaking() { if (ttsSupported()) window.speechSynthesis.cancel() }
-export function hasUrduVoice() { return ttsSupported() && !!pickVoice('ur') }
+
+const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+/**
+ * Re-express Urdu UI text for another voice: every known Urdu phrase (with {placeholders})
+ * is swapped for the same message in `target`. Longest phrases first so sentences beat words.
+ */
+export function respeak(text: string, target: Partial<Record<string, string>>): string {
+  const keys = Object.keys(target).filter(k => (ur as Record<string, string>)[k])
+    .sort((a, b) => (ur as Record<string, string>)[b].length - (ur as Record<string, string>)[a].length)
+  let out = text
+  for (const k of keys) {
+    const from = (ur as Record<string, string>)[k], to = target[k]!
+    const names: string[] = []
+    const pattern = escape(from).replace(/\\\{(\w+)\\\}/g, (_, n) => { names.push(n); return '(.+?)' })
+    out = out.replace(new RegExp(pattern + (names.length ? '(?=[.،۔?!؟\\s]|$)' : ''), 'g'), (...m) => {
+      let r = to
+      names.forEach((n, i) => { r = r.replace(`{${n}}`, m[i + 1]) })
+      return r
+    })
+  }
+  return out
+}
+
+/** Split into sentences: Chrome stops reading utterances longer than ~15 seconds. */
+const sentences = (t: string) => t.split(/(?<=[.!?؟۔।])\s+/).map(x => x.trim()).filter(Boolean)
+
+let session = 0
+/**
+ * Speak text in the person's language. For Urdu: an Urdu voice if the phone has one, otherwise the
+ * Hindi voice reading the same spoken Urdu, otherwise English. Resolves with what was used.
+ */
+export async function speak(text: string, lang: Lang, onEnd?: () => void): Promise<VoiceMode> {
+  if (!ttsSupported()) { onEnd?.(); return 'none' }
+  const my = ++session
+  window.speechSynthesis.cancel()
+  await voicesReady()
+  if (my !== session) return 'none' // a newer request replaced this one
+
+  let voice: SpeechSynthesisVoice | null
+  let say = text
+  let mode: VoiceMode = 'native'
+  if (lang === 'ur') {
+    voice = urduVoice()
+    if (!voice && (voice = hindiVoice())) { say = respeak(text, urSpoken); mode = 'urdu_via_hindi' }
+    else if (!voice) { voice = englishVoice(); say = respeak(text, en); mode = 'urdu_via_english' }
+  } else voice = englishVoice()
+
+  const parts = sentences(say)
+  parts.forEach((p, i) => {
+    const u = new SpeechSynthesisUtterance(p)
+    if (voice) { u.voice = voice; u.lang = voice.lang } else u.lang = lang === 'ur' ? 'ur-PK' : 'en-US'
+    u.rate = 0.9
+    if (i === parts.length - 1) { u.onend = () => onEnd?.(); u.onerror = () => onEnd?.() }
+    window.speechSynthesis.speak(u)
+  })
+  if (!parts.length) onEnd?.()
+  // Chrome on some Android builds pauses the queue; nudging resume keeps it going
+  window.speechSynthesis.resume()
+  return mode
+}
+export function stopSpeaking() { session++; if (ttsSupported()) window.speechSynthesis.cancel() }
 
 // ---- speech to text ----
 interface SR {
@@ -51,7 +110,6 @@ export function listen(lang: Lang, onText: (text: string, confidence: number) =>
   const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition
   if (!Ctor) { onError('unsupported'); return () => {} }
   const r = new Ctor()
-    // Fallback to hi-IN if ur-PK fails (Hindi understands Urdu natively in Chrome)
   r.lang = lang === 'ur' ? 'ur-PK' : 'en-PK'
   r.interimResults = false
   r.maxAlternatives = 1
