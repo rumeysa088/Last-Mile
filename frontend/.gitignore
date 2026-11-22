@@ -3,3 +3,6 @@ dist
 dev-dist
 *.tsbuildinfo
 .env.local
+
+.vercel
+.env*
