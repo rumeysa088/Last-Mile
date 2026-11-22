@@ -59,3 +59,15 @@ def test_ocr_unopenable_file(tmp_path):
 def test_evaluation_reports_numbers():
     e = evaluate()
     assert e["missed_scams"] == 0 and e["n"] > 0
+
+
+def test_clean_white_document_is_not_flagged_as_too_bright():
+    from app.services.ai.ocr import check_quality
+    from PIL import ImageFont
+    img = Image.new("RGB", (800, 400), "white")
+    d = ImageDraw.Draw(img)
+    f = ImageFont.load_default(size=32)
+    for i, t in enumerate(["Name: Ayesha Khan", "CNIC: 42101-1234567-8", "DOB: 01-02-1990"]):
+        d.text((40, 80 + 80 * i), t, fill="black", font=f)
+    quality, warnings = check_quality(img)
+    assert "image is too dark or too bright" not in warnings
