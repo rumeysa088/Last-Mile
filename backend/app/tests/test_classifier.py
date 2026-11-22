@@ -53,3 +53,14 @@ def test_mock_works_without_internet_or_key():
     r = classify_message("hello there how are you", client=LLMClient(mode="mock", api_key=None))
     check_contract(r)
     assert r.model_version == "mock-v1"
+
+
+@pytest.mark.parametrize("text", [
+    "Your Raast transfer of Rs 5000 to Ali was successful.",
+    "Your OTP is 482913. Do not share it with anyone.",
+    "Your payment of Rs 1200 for the electricity bill was received.",
+])
+def test_real_messages_are_not_flagged_as_scams(text):
+    r = classify_message(text)
+    check_contract(r)
+    assert r.result != "suspicious"

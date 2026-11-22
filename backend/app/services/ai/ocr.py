@@ -1,11 +1,13 @@
 """OCR with Tesseract + image quality checks.
 OCR only READS text. It never verifies identity or approves anything."""
+import os
 import re
 from typing import Optional
 from .schemas import OCRResult, FieldResult
 
 MIN_W, MIN_H = 300, 200
 SHARPNESS_MIN = 60.0     # tune on real samples (see DECISIONS.md)
+BRIGHT_MAX = 253         # clean white pages average ~250; only synthetic images tested
 
 _CNIC = re.compile(r"\b\d{5}-\d{7}-\d\b")
 _DOB = re.compile(r"\b\d{2}[./-]\d{2}[./-]\d{4}\b")
@@ -34,7 +36,7 @@ def check_quality(img):
     if sharp < SHARPNESS_MIN:
         warnings.append("image looks blurry")
     mean = ImageStat.Stat(g).mean[0]
-    if mean < 50 or mean > 235:
+    if mean < 50 or mean > BRIGHT_MAX:
         warnings.append("image is too dark or too bright")
     return ("low" if warnings else "good"), warnings
 
@@ -51,6 +53,9 @@ def process_image(path: str) -> OCRResult:
     quality, warnings = check_quality(img)
     try:
         import pytesseract
+        cmd = os.getenv("TESSERACT_CMD")
+        if cmd:
+            pytesseract.pytesseract.tesseract_cmd = cmd
         version = f"tesseract-{pytesseract.get_tesseract_version()}"
         text = pytesseract.image_to_string(img)
     except Exception:
