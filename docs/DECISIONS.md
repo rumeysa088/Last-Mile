@@ -35,6 +35,7 @@ Extractive only: the answer is copied from a trusted chunk, with title + identif
 ## 6. OCR and voice
 OCR reads text only; it never verifies identity. Blurry/small/dark images -> low quality -> human review. Sharpness threshold (60) and brightness limit (mean > 253, raised from 235 after a clean white page falsely failed) were tuned on synthetic images only. Tesseract English works; Urdu data is installed but NOT tested.
 Voice is MOCK. Languages really tested with a real engine: none yet. Urdu is NOT claimed; the user is offered text entry. Transcript always needs user confirmation.
+In the app, the microphone button uses the browser's own speech feature (built by C). My voice.py and A's /voice/stt route are mocks. No language has been tested with a real engine, so text entry is always offered.
 
 ## 7. Evaluation (small, honest)
 `python -m app.services.ai.evaluate` on 31 hand-written messages (12 scams, 12 real, 7 ambiguous; mostly English, some Roman Urdu, one Urdu-script):
