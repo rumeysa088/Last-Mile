@@ -1,6 +1,4 @@
 
-
-
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -29,7 +27,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Register CORS middleware for frontend development
+# Register CORS middleware for local development and production frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -37,6 +35,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://last-mile-iota-nine.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
