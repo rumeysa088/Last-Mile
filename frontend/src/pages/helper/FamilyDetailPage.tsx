@@ -64,9 +64,11 @@ export default function FamilyDetailPage() {
       {blocked && (
         <section className="slip p-5 space-y-4 border-danger">
           <div className="flex items-center gap-3"><Lock className="text-danger" size={32} aria-hidden /><h1 className="text-xl font-bold">{t('access_blocked_title')}</h1></div>
-          <p dir="auto">{blocked.message}</p>
+          {(blocked.code === 'CONSENT_REQUIRED' || blocked.code === 'CONSENT_WITHDRAWN' || blocked.code === 'NOT_ASSIGNED')
+            ? <p>{t('consent_blocked_body', { name: who })}</p> : null}
+          <p className="text-sm text-ink-soft" dir="auto">{blocked.message}</p>
           <p className="latin text-xs text-ink-faint" dir="ltr">HTTP {blocked.status} {blocked.code}</p>
-          {(blocked.code === 'CONSENT_WITHDRAWN' || blocked.code === 'CONSENT_REQUIRED') && (
+          {(blocked.code === 'CONSENT_WITHDRAWN' || blocked.code === 'CONSENT_REQUIRED' || blocked.code === 'NOT_ASSIGNED') && (
             <button className="btn-primary w-full" onClick={() => setAsking(true)}><ShieldCheck aria-hidden /> {t('ask_consent')}</button>
           )}
         </section>
@@ -80,9 +82,9 @@ export default function FamilyDetailPage() {
               <div>
                 <h1 className="text-xl font-bold">{who}</h1>
                 <div className="text-sm text-ink-soft flex flex-wrap gap-x-3">
-                  <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden />{t('family_district', { d: family.district })}</span>
-                  <span className="inline-flex items-center gap-1"><Users size={14} aria-hidden />{t('family_members', { n: family.members_count })}</span>
-                  <span>{t('family_cnic', { d: family.cnic_last4 })}</span>
+                  {family.district && <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden />{t('family_district', { d: family.district })}</span>}
+                  {family.members_count > 0 && <span className="inline-flex items-center gap-1"><Users size={14} aria-hidden />{t('family_members', { n: family.members_count })}</span>}
+                  {family.cnic_last4 && <span>{t('family_cnic', { d: family.cnic_last4 })}</span>}
                 </div>
               </div>
             </div>
@@ -102,12 +104,18 @@ export default function FamilyDetailPage() {
       )}
 
       <Sheet open={asking} onClose={() => setAsking(false)} title={t('consent_script_title', { name: who })}>
-        <p className="text-lg mb-4 rounded-xl bg-white border-2 border-ink/10 p-4">{script}</p>
-        <div className="mb-4"><ListenButton text={script} /></div>
-        <div className="grid gap-3">
-          <button className="btn-primary" disabled={busy} onClick={grant}><ShieldCheck aria-hidden /> {t('consent_citizen_yes', { name: who })}</button>
-          <button className="btn-quiet" onClick={() => setAsking(false)}>{t('cancel')}</button>
-        </div>
+        {consentApi.helperCanRecord ? <>
+          <p className="text-lg mb-4 rounded-xl bg-white border-2 border-ink/10 p-4">{script}</p>
+          <div className="mb-4"><ListenButton text={script} /></div>
+          <div className="grid gap-3">
+            <button className="btn-primary" disabled={busy} onClick={grant}><ShieldCheck aria-hidden /> {t('consent_citizen_yes', { name: who })}</button>
+            <button className="btn-quiet" onClick={() => setAsking(false)}>{t('cancel')}</button>
+          </div>
+        </> : <>
+          <p className="text-lg mb-4">{t('consent_ask_family', { name: who })}</p>
+          <div className="mb-4"><ListenButton text={t('consent_ask_family', { name: who })} /></div>
+          <button className="btn-quiet w-full" onClick={() => setAsking(false)}>{t('close')}</button>
+        </>}
       </Sheet>
     </div>
   )

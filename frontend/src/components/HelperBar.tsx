@@ -15,7 +15,7 @@ export default function HelperBar() {
       <span className="latin flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white font-bold" style={{ background: c.solid }} aria-hidden>{initials(active.head_name)}</span>
       <div className="flex-1 min-w-0">
         <div className="text-xs font-bold text-ink-soft">{t('now_helping')}</div>
-        <div className="font-bold truncate">{lang === 'ur' ? active.head_name_ur : active.head_name} <span className="latin text-ink-soft font-normal text-sm">•••{active.cnic_last4}</span></div>
+        <div className="font-bold truncate">{lang === 'ur' ? active.head_name_ur : active.head_name} {active.cnic_last4 && <span className="latin text-ink-soft font-normal text-sm">•••{active.cnic_last4}</span>}</div>
       </div>
       <button className="btn-small bg-white" onClick={() => { clear(); nav('/helper') }}><Repeat size={16} aria-hidden /> {t('switch_family')}</button>
     </div>

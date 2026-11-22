@@ -49,7 +49,7 @@ export default function HelperDashboard() {
   const shown = useMemo(() => (families ?? []).filter(f => {
     if (q && !nameMatchesQuery(f.head_name, q) && !f.head_name_ur.includes(q.trim())) return false
     if (filter === 'locked') return f.consent_status !== 'active'
-    if (filter === 'action') return f.consent_status === 'active' && (f.latest_case_status === null || f.latest_case_status === 'info_needed' || draftFor.has(f.id))
+    if (filter === 'action') return f.consent_status === 'active' && (f.latest_case_status === null || f.latest_case_status === 'needs_information' || draftFor.has(f.id))
     return true
   }), [families, q, filter, draftFor])
 
@@ -96,9 +96,9 @@ export default function HelperDashboard() {
                     {draftFor.has(f.id) && <PencilLine size={16} className="text-saffron-dark shrink-0" aria-label="draft" />}
                   </span>
                   <span className="flex flex-wrap gap-x-3 text-sm text-ink-soft">
-                    <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden />{f.district}</span>
-                    <span className="inline-flex items-center gap-1"><Users size={14} aria-hidden /><span className="latin">{f.members_count}</span></span>
-                    <span className="latin">•••{f.cnic_last4}</span>
+                    {f.district && <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden />{f.district}</span>}
+                    {f.members_count > 0 && <span className="inline-flex items-center gap-1"><Users size={14} aria-hidden /><span className="latin">{f.members_count}</span></span>}
+                    {f.cnic_last4 && <span className="latin">•••{f.cnic_last4}</span>}
                   </span>
                   {f.possible_duplicates.length > 0 && (
                     <span className="mt-1 flex items-start gap-1 text-xs font-bold text-saffron-dark">
@@ -126,15 +126,17 @@ export default function HelperDashboard() {
               <Avatar f={pick} size={64} />
               <div>
                 <div className="text-xl font-bold latin">{pick.head_name}</div>
-                <div className="text-lg font-urdu" dir="rtl" lang="ur">{pick.head_name_ur}</div>
+                {pick.head_name_ur !== pick.head_name && <div className="text-lg font-urdu" dir="rtl" lang="ur">{pick.head_name_ur}</div>}
               </div>
             </div>
             <p className="font-bold">{t('switch_check')}</p>
-            <ul className="grid grid-cols-3 gap-2 text-center text-sm">
-              <li className="slip p-2"><MapPin className="mx-auto" aria-hidden />{pick.district}</li>
-              <li className="slip p-2"><Users className="mx-auto" aria-hidden />{t('family_members', { n: pick.members_count })}</li>
-              <li className="slip p-2 latin"><span className="block text-lg font-bold">{pick.cnic_last4}</span>CNIC</li>
-            </ul>
+            {(pick.district || pick.members_count > 0 || pick.cnic_last4) && (
+              <ul className="grid grid-cols-3 gap-2 text-center text-sm">
+                {pick.district && <li className="slip p-2"><MapPin className="mx-auto" aria-hidden />{pick.district}</li>}
+                {pick.members_count > 0 && <li className="slip p-2"><Users className="mx-auto" aria-hidden />{t('family_members', { n: pick.members_count })}</li>}
+                {pick.cnic_last4 && <li className="slip p-2 latin"><span className="block text-lg font-bold">{pick.cnic_last4}</span>CNIC</li>}
+              </ul>
+            )}
             {pick.consent_status !== 'active' && <Notice tone="warn">{t(pick.consent_status === 'withdrawn' ? 'helper_locked' : 'helper_no_consent')}</Notice>}
             <button className="btn-primary w-full" onClick={() => { select(pick); setPick(null); nav(`/helper/families/${pick.id}`) }}>{t('switch_yes')}</button>
             <button className="btn-quiet w-full" onClick={() => setPick(null)}>{t('cancel')}</button>

@@ -1,4 +1,4 @@
-import { http, getToken, USE_MOCK } from './client'
+import { http, USE_MOCK, getToken } from './client'
 import { mock } from './mockServer'
 import type { Me } from './types'
 

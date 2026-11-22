@@ -8,7 +8,7 @@ export default function AdminDashboard() {
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
-    api.listCases({ status: 'pending' }).then(setCases).catch(e => setErr(String(e)))
+    api.listCases({ status: 'submitted' }).then(setCases).catch(e => setErr(String(e)))
   }, [])
 
   return (

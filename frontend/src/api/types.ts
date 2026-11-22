@@ -13,7 +13,8 @@ export interface Me {
   family_id?: string | null // set for citizens
 }
 
-export type CaseStatus = 'draft' | 'pending' | 'info_needed' | 'approved' | 'rejected'
+// Same vocabulary as A's backend (models.Case ck_cases_valid_status). One vocabulary everywhere.
+export type CaseStatus = 'submitted' | 'under_review' | 'needs_information' | 'approved' | 'rejected' | 'closed'
 export type CaseRoute = 'ready' | 'more_info' | 'human_review' | null
 
 export type IncomeBand = 'lt_20k' | '20k_35k' | '35k_50k' | 'gt_50k'
@@ -35,7 +36,7 @@ export interface CaseCreate {
 }
 
 export interface StatusEvent {
-  status: CaseStatus | 'submitted' | 'document_added' | 'routed'
+  status: CaseStatus | 'document_added' | 'routed'
   at: string
   actor: string // 'you', 'helper: <name>', 'system', 'officer'
   note: string // plain words, safe to show to the citizen
@@ -119,3 +120,21 @@ export interface OCRResult {
 }
 
 export interface ApiErrorBody { error: { code: string; message: string; details?: unknown; request_id?: string } }
+
+// --- A's backend shapes (backend/app/schemas) ---
+export interface BackendCase {
+  id: string; tenant_id: string; family_id: string | null; created_by: string; assigned_to: string | null
+  title: string; description: string | null; status: CaseStatus; created_at: string; updated_at: string
+}
+export interface BackendFamily { id: string; tenant_id: string; created_by: string | null; name: string; created_at: string }
+export interface BackendConsent {
+  id: string; family_id: string; granted_by: string; subject_id: string | null; recipient_id: string | null
+  purpose: string | null; scope: string; status: 'active' | 'withdrawn' | 'expired'; granted_at: string; withdrawn_at: string | null
+}
+export interface BackendDocument { id: string; case_id: string; uploaded_by: string; filename: string; content_type: string | null; created_at: string }
+export interface BackendEvaluation {
+  id: string; rule_version_id: string; case_id: string | null; input_snapshot: Record<string, unknown>
+  result: { rule_set_id?: string; rule_version?: number; breakdown?: { field: string; operator: string; expected: unknown; actual: unknown; status: string; message: string }[] }
+  missing_fields: string[]; outcome: 'eligible' | 'ineligible' | 'unknown'; evaluated_at: string
+}
+export interface BackendScam { result: Verdict; confidence: number; explanation: string; evidence: string[]; sources: string[]; model_version: string; requires_human_review: boolean }

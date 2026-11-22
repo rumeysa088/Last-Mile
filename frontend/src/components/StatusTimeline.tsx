@@ -3,7 +3,7 @@ import type { StatusEvent } from '../api/types'
 import { useI18n, type TKey } from '../i18n'
 
 const ICON: Record<string, typeof Circle> = {
-  submitted: Send, routed: Cpu, document_added: FileImage, approved: CheckCircle2, rejected: XCircle, info_needed: HelpCircle, pending: UserCheck,
+  submitted: Send, routed: Cpu, document_added: FileImage, approved: CheckCircle2, rejected: XCircle, needs_information: HelpCircle, under_review: UserCheck,
 }
 
 export default function StatusTimeline({ events }: { events: StatusEvent[] }) {
