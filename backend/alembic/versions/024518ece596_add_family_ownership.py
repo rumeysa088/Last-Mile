@@ -18,18 +18,26 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+# def upgrade() -> None:
+#     op.add_column(
+#         "families",
+#         sa.Column("created_by", sa.Uuid(), nullable=True),
+#     )
+#     op.create_foreign_key(
+#         "fk_families_created_by_users",
+#         "families",
+#         "users",
+#         ["created_by"],
+#         ["id"],
+#     )
 def upgrade() -> None:
-    op.add_column(
-        "families",
-        sa.Column("created_by", sa.Uuid(), nullable=True),
-    )
-    op.create_foreign_key(
-        "fk_families_created_by_users",
-        "families",
-        "users",
-        ["created_by"],
-        ["id"],
-    )
+    with op.batch_alter_table('families') as batch_op:
+        batch_op.create_foreign_key(
+            "fk_families_created_by_users",
+            "users", # or whatever table it points to
+            ["created_by"],
+            ["id"]
+        )
 
 
 def downgrade() -> None:
