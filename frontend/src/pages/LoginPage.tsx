@@ -5,11 +5,12 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { USE_MOCK } from '../api/client'
 import { homeFor, useAuth } from '../auth/AuthProvider'
 import { Brand, LangToggle } from '../components/AppShell'
+import { CornerBlob, HeadingBlob } from '../components/Blob'
 import Notice from '../components/Notice'
 import { useI18n, type TKey } from '../i18n'
 import { ApiError, isNetworkError } from '../lib/errors'
 
-// Mock mode: in-browser demo accounts. Real backend: our updated .com accounts.
+// Mock mode: in-browser demo accounts. Real backend: our fixed .com accounts.
 const PERSONAS: { email: string; name: string; key: TKey; Icon: typeof Store }[] = USE_MOCK ? [
   { email: 'zainab@demo.lastmile', name: 'Zainab Bibi', key: 'persona_zainab', Icon: ShieldQuestion },
   { email: 'imran@demo.lastmile', name: 'Imran Qureshi', key: 'persona_imran', Icon: Store },
@@ -17,7 +18,7 @@ const PERSONAS: { email: string; name: string; key: TKey; Icon: typeof Store }[]
   { email: 'officer@demo.lastmile', name: 'Demo Officer', key: 'persona_officer', Icon: Gavel },
 ] : [
   { email: 'citizen@lastmile.com', name: 'Zainab Bibi', key: 'persona_zainab', Icon: ShieldQuestion },
-  { email: 'citizen@lastmile.com', name: 'Imran Qureshi', key: 'persona_imran', Icon: Store },
+  { email: 'citizen@lastmile.com', name: 'Imran Qureshi', key: 'persona_imran', Icon: Store }, // Shopkeeper back
   { email: 'helper@lastmile.com', name: 'Rukhsana Baloch', key: 'persona_helper', Icon: HandHelping },
   { email: 'officer@lastmile.com', name: 'Demo Officer', key: 'persona_officer', Icon: Gavel },
 ]
@@ -41,12 +42,9 @@ export default function LoginPage() {
 
   const handlePersonaClick = (p: { email: string }) => {
     if (USE_MOCK) {
-      // Use C's mock password for mock accounts
       go(p.email, 'demo1234')
       return
     }
-    
-    // Use our real backend passwords
     let pass = 'CitizenPass123!'
     if (p.email.includes('helper')) pass = 'HelperPass123!'
     if (p.email.includes('officer')) pass = 'OfficerPass123!'
@@ -54,11 +52,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="bg-ink text-paper text-xs text-center px-3 py-1">{t('prototype')}</div>
-      <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
+    <div className="relative min-h-screen overflow-x-hidden">
+      <div className="relative z-10 bg-ink text-paper text-xs text-center px-3 py-1">{t('prototype')}</div>
+      <CornerBlob className="top-6" />
+      <div className="relative max-w-xl mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center justify-between"><Brand /><LangToggle /></div>
-        <h1 className="text-3xl font-bold">{t('login_pick')}</h1>
+        <div className="relative pt-10">
+          <HeadingBlob className="top-6 -start-3 w-[150px] h-[130px]" />
+          <h1 className="relative text-3xl font-extrabold leading-tight max-w-xs">{t('login_pick')}</h1>
+        </div>
         {err && <Notice tone="danger">{err}</Notice>}
         <ul className="grid gap-3">
           {PERSONAS.map(p => (

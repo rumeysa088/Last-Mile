@@ -51,6 +51,11 @@ export const en = {
   tile_track: 'My applications',
   tile_scam: 'Is this message real?',
   tile_consent: 'Who can see my data',
+  home_title_pre: 'Get the',
+  home_title_hl: 'help',
+  home_title_post: 'you are owed.',
+  home_title_full: 'Get the help you are owed.',
+  my_application: 'My application',
 
   // apply
   step_of: 'Step {n} of {total}',
@@ -115,6 +120,8 @@ export const en = {
   voice_unsupported: 'Voice input does not work in this browser. Please type, or ask a helper.',
   voice_failed: 'We could not hear clearly. Try again or type.',
   voice_no_urdu: 'This phone has no Urdu voice, so reading in English.',
+  voice_via_hindi: 'This phone has no Urdu voice, so the Hindi voice is reading the same words.',
+  choose_one: 'Choose one of these',
 
   // track
   track_title: 'My applications',

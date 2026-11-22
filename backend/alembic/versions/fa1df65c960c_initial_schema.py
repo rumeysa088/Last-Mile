@@ -1,4 +1,4 @@
-"""initial schema
+git checkout origin/backend-integration -- frontend/src/i18n frontend/src/index.css frontend/src/components/AppShell.tsx frontend/src/components/Blob.tsx frontend/src/pages/LoginPage.tsx"""initial schema
 
 Revision ID: fa1df65c960c
 Revises:

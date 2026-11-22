@@ -6,6 +6,7 @@ export default {
       colors: {
         ink: { DEFAULT: '#14213D', soft: '#4A5672', faint: '#8A93A6' },
         paper: { DEFAULT: '#F1F5F2', deep: '#E3EBE6' },
+        line: '#D1D5DB', // <--- Added this to fix the border-line error
         teal: { DEFAULT: '#1F6F5C', dark: '#16503F', light: '#D6E9E2' },
         saffron: { DEFAULT: '#F2A33A', dark: '#B86F0E', light: '#FDEBD0' },
         danger: { DEFAULT: '#C2362B', light: '#F8DEDB' },

@@ -21,10 +21,11 @@ export const SCAM_EXAMPLES = [
   'Your relief application has been received. Please visit the tehsil office with your original ID card during working hours.',
 ]
 
+// Soft-blob palette: coral = scam, sage = no warning signs, blue = not sure. Navy text on all three.
 const LOOK = {
-  suspicious: { Icon: ShieldAlert, bg: 'bg-danger', soft: 'bg-danger-light', tone: 'danger' as const, mark: 'bg-danger/20 decoration-danger' },
-  likely_legitimate: { Icon: ShieldCheck, bg: 'bg-safe', soft: 'bg-safe-light', tone: 'safe' as const, mark: 'bg-safe/20 decoration-safe' },
-  unknown: { Icon: ShieldQuestion, bg: 'bg-unsure', soft: 'bg-unsure-light', tone: 'unsure' as const, mark: 'bg-unsure/20 decoration-unsure' },
+  suspicious: { Icon: ShieldAlert, bg: 'bg-coral', soft: 'bg-coral-light', tone: 'danger' as const, mark: 'bg-saffron decoration-ink' },
+  likely_legitimate: { Icon: ShieldCheck, bg: 'bg-sage', soft: 'bg-sage-light', tone: 'safe' as const, mark: 'bg-saffron decoration-ink' },
+  unknown: { Icon: ShieldQuestion, bg: 'bg-mist', soft: 'bg-mist-light', tone: 'unsure' as const, mark: 'bg-saffron decoration-ink' },
 }
 const STEP_ICON = (s: string) => /link|click/i.test(s) ? Link2Off : /money|send/i.test(s) ? Ban : /report|delete/i.test(s) ? Trash2 : /number|helpline|official/i.test(s) ? PhoneOff : /person|review/i.test(s) ? UserCheck : Search
 
@@ -102,10 +103,10 @@ export default function ScamCheckPage() {
 
       {res && look && (
         <section ref={resultRef} className="slip overflow-hidden scroll-mt-20" aria-live="polite" aria-labelledby="verdict">
-          <div className={`${look.bg} text-white px-5 py-5 flex items-center gap-4`}>
-            <look.Icon size={52} aria-hidden strokeWidth={2.2} />
+          <div className={`${look.bg} text-ink px-5 py-5 flex items-center gap-4`}>
+            <span className="w-14 h-14 rounded-full bg-white flex items-center justify-center shrink-0"><look.Icon size={30} aria-hidden strokeWidth={2.2} /></span>
             <div className="flex-1">
-              <h2 id="verdict" className="text-2xl font-bold">{verdictText}</h2>
+              <h2 id="verdict" className="text-2xl font-extrabold">{verdictText}</h2>
               {res.requires_human_review && <div className="text-sm opacity-95 mt-1">{t('scam_human')}</div>}
             </div>
           </div>
