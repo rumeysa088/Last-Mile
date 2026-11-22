@@ -26,11 +26,11 @@ export function CaseList({ cases, base }: { cases: CitizenCase[]; base: string }
       {cases.map(c => (
         <li key={c.id}>
           <Link to={`${base}/${c.id}`} className="slip flex items-center gap-3 p-4 hover:border-teal">
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 space-y-1">
               <div className="latin font-bold whitespace-nowrap" dir="ltr">{c.reference}</div>
               <div className="text-sm text-ink-soft truncate">{c.applicant_name} <span className="latin">{new Date(c.submitted_at).toLocaleDateString()}</span></div>
+              <StatusPill status={c.status} />
             </div>
-            <StatusPill status={c.status} />
             <ChevronRight className="rtl:rotate-180 text-ink-faint" aria-hidden />
           </Link>
         </li>
@@ -90,11 +90,11 @@ export function CaseDetailView({ c, stale, onChanged }: { c: CitizenCase; stale?
     <div className="space-y-5">
       {stale && <Notice tone="warn">{t('net_offline')}</Notice>}
       <section className="slip p-5 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="latin text-xl font-bold whitespace-nowrap" dir="ltr">{c.reference}</span>
+        <div className="space-y-2">
+          <div className="latin text-xl font-bold whitespace-nowrap" dir="ltr">{c.reference}</div>
           <StatusPill status={c.status} />
         </div>
-        {routeKey && (c.status === 'pending' || c.status === 'info_needed') && <div className="text-ink-soft font-bold">{t(routeKey)}</div>}
+        {routeKey && c.status === 'submitted' && <div className="text-ink-soft font-bold">{t(routeKey)}</div>}
         <p className="text-lg" dir="auto">{c.user_explanation}</p>
         <ListenButton text={plain} />
       </section>

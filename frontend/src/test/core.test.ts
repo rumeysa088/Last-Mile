@@ -67,7 +67,7 @@ describe('application validation', () => {
 describe('cost of being wrong: routing never approves', () => {
   it('income above limit goes to a human, not auto-reject', async () => {
     const c = await mock.createCase(ZAINAB, body({ monthly_income_pkr: 62000, income_band: 'gt_50k' }), 'k2')
-    expect(c.route).toBe('human_review'); expect(c.status).toBe('pending')
+    expect(c.route).toBe('human_review'); expect(c.status).toBe('submitted')
   })
   it('missing CNIC photo asks for more proof', async () => {
     const c = await mock.createCase(ZAINAB, body(), 'k3')

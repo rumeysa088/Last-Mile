@@ -1,15 +1,15 @@
 // frontend/src/api/client.ts
 // Shared HTTP client. Coordinates with C.
 import { ApiError, NetworkError } from '../lib/errors'
-import { getNetMode } from '../lib/net'
+import { getNetMode, sleep } from '../lib/net'
 import { mockDb, mock, type MockRule } from './mockServer'
+import { toCitizenCase, decodeDescription } from './caseCodec'
 export type { Me } from './types'
-import type { Me } from './types'
+import type { Me, BackendCase, BackendDocument, CaseStatus } from './types'
+export type { CaseStatus }
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
 export const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? 'true') === 'true'
-
-export type CaseStatus = 'draft' | 'pending' | 'info_needed' | 'approved' | 'rejected'
 
 export interface CaseSummary {
   id: string
@@ -53,29 +53,63 @@ export async function http<T>(path: string, init: RequestInit & { idempotencyKey
   const token = getToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (init.idempotencyKey) headers.set('Idempotency-Key', init.idempotencyKey)
-  if (getNetMode() === 'offline') throw new NetworkError()
+  
+  const mode = getNetMode()
+  if (mode === 'offline') throw new NetworkError()
+  if (mode === 'slow') await sleep(2200)
+  
   let res: Response
   try {
     res = await fetch(`${BASE}${path}`, { ...init, headers })
   } catch {
     throw new NetworkError()
   }
+  
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, body?.error?.code ?? `HTTP_${res.status}`, body?.error?.message ?? `HTTP ${res.status}`, body?.error?.details)
+    const msg = body?.error?.message ?? (typeof body?.detail === 'string' ? body.detail : null) ?? `HTTP ${res.status}`
+    throw new ApiError(res.status, body?.error?.code ?? body?.code ?? `HTTP_${res.status}`, msg, body?.error?.details ?? body?.details)
   }
-  return res.json() as Promise<T>
+  
+  const data = (await res.json()) as T
+  if (mode === 'flaky' && (init.method ?? 'GET') !== 'GET' && Math.random() < 0.5) throw new NetworkError('Connection dropped before the reply arrived')
+  return data
 }
 
 // ---------- MOCKS (until A lands backend) ----------
 const MOCK_CASES: CaseSummary[] = [
-  { id: 'c-001', citizen_name: 'Ayesha Bibi',  program_code: 'BISP-2026', status: 'pending', route: 'human_review', ai_confidence: 0.62, submitted_at: '2026-11-21T10:00:00Z', tenant_id: 't-punjab' },
-  { id: 'c-002', citizen_name: 'Muhammad Ali', program_code: 'BISP-2026', status: 'pending', route: 'more_info',    ai_confidence: 0.41, submitted_at: '2026-11-21T09:30:00Z', tenant_id: 't-punjab' },
-  { id: 'c-003', citizen_name: 'Fatima Khan',  program_code: 'BISP-2026', status: 'pending', route: 'ready',         ai_confidence: 0.91, submitted_at: '2026-11-21T08:15:00Z', tenant_id: 't-punjab' },
+  { id: 'c-001', citizen_name: 'Ayesha Bibi',  program_code: 'BISP-2026', status: 'submitted', route: 'human_review', ai_confidence: 0.62, submitted_at: '2026-11-21T10:00:00Z', tenant_id: 't-punjab' },
+  { id: 'c-002', citizen_name: 'Muhammad Ali', program_code: 'BISP-2026', status: 'submitted', route: 'more_info',    ai_confidence: 0.41, submitted_at: '2026-11-21T09:30:00Z', tenant_id: 't-punjab' },
+  { id: 'c-003', citizen_name: 'Fatima Khan',  program_code: 'BISP-2026', status: 'submitted', route: 'ready',         ai_confidence: 0.91, submitted_at: '2026-11-21T08:15:00Z', tenant_id: 't-punjab' },
 ]
 const rulesStore = () => mockDb().rules as unknown as RuleVersion[]
 const persist = () => { try { localStorage.setItem('lm_mockdb_v2', JSON.stringify(mockDb())) } catch { /* ignore */ } }
 const MOCK_RULES = { find: (f: (r: RuleVersion) => boolean) => rulesStore().find(f), filter: (f: (r: RuleVersion) => boolean) => rulesStore().filter(f) }
+
+// C's Real backend case logic
+function backendSummary(c: BackendCase): CaseSummary {
+  const x = toCitizenCase(c)
+  return { id: c.id, citizen_name: x.applicant_name, program_code: x.program_code, status: c.status, route: x.route,
+    ai_confidence: x.ai_confidence, submitted_at: c.created_at, tenant_id: c.tenant_id }
+}
+async function backendDetail(id: string): Promise<CaseDetail> {
+  const c = await http<BackendCase>(`/cases/${id}`)
+  const docs = await http<BackendDocument[]>(`/cases/${id}/documents`).catch(() => [] as BackendDocument[])
+  const x = toCitizenCase(c, docs)
+  const t = decodeDescription(c.description)?.triage
+  const a = decodeDescription(c.description)?.application
+  const facts = a ? [`Household: ${a.household_size} people, ${a.household_situation}`, `Income: ${a.monthly_income_pkr != null ? 'Rs ' + a.monthly_income_pkr.toLocaleString() : 'band ' + a.income_band}`, `District: ${a.district}`] : []
+  return {
+    ...backendSummary(c),
+    ai_explanation: t ? { summary: `Advisory triage: ${t.route} (rule outcome: ${t.outcome}). Officer decides.`, reasons: [...x.reasons, ...facts], sources: x.sources.map(s => `${s.title} (evaluation ${s.chunk_id})`) } : null,
+    missing_fields: x.missing_fields,
+    ocr_warnings: t?.photo_quality && t.photo_quality !== 'good' ? ['CNIC photo flagged as hard to read on the phone'] : [],
+    rule_version_id: x.rule_version_id,
+    documents: docs.map(d => ({ id: d.id, kind: d.filename, url: `${BASE}/cases/${id}/documents/${d.id}/download` })),
+  }
+}
+const DECISION_STATUS = { approve: 'approved', reject: 'rejected', request_info: 'needs_information' } as const
+
 function citizenCases(): CaseSummary[] {
   return mockDb().cases.map(c => ({ id: c.id, citizen_name: c.applicant_name, program_code: c.program_code, status: c.status, route: c.route,
     ai_confidence: c.ai_confidence, submitted_at: c.submitted_at, tenant_id: 't-sindh-relief' }))
@@ -120,10 +154,10 @@ export const api = {
       if (params.q) out = out.filter(c => c.citizen_name.toLowerCase().includes(params.q!.toLowerCase()))
       return Promise.resolve(out)
     }
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams({ limit: '100' })
     if (params.status) qs.set('status', params.status)
-    if (params.q) qs.set('q', params.q)
-    return http<CaseSummary[]>(`/cases?${qs.toString()}`)
+    return http<BackendCase[]>(`/cases/?${qs.toString()}`).then(all => all.map(backendSummary)
+      .filter(c => !params.q || c.citizen_name.toLowerCase().includes(params.q.toLowerCase())))
   },
 
   getCase: (id: string) => {
@@ -147,22 +181,20 @@ export const api = {
         ],
       })
     }
-    return http<CaseDetail>(`/cases/${id}`)
+    return backendDetail(id)
   },
 
   reviewCase: (id: string, decision: 'approve' | 'reject' | 'request_info', reason: string) => {
     if (USE_MOCK) {
       const shared = mock.officerReview(id, decision, reason)
       if (shared) return Promise.resolve(shared)
-      return Promise.resolve({ id, status: decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'info_needed', reason })
     }
-    return http<{ id: string; status: CaseStatus; reason: string }>(`/cases/${id}/review`, {
+    if (USE_MOCK) return Promise.resolve({ id, status: DECISION_STATUS[decision] as CaseStatus, reason })
+    
+    return http<BackendCase>(`/cases/${id}/review`, {
       method: 'POST',
-      body: JSON.stringify({ 
-        status: decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'info_needed', 
-        reason 
-      })
-    })
+      body: JSON.stringify({ status: DECISION_STATUS[decision], reason }),
+    }).then(c => ({ id: c.id, status: c.status, reason }))
   },
 
   getActiveRule: (program: string) =>

@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, type CaseSummary, type CaseStatus } from '../../api/client'
 
-const STATUSES: CaseStatus[] = ['pending', 'info_needed', 'approved', 'rejected']
+const STATUSES: CaseStatus[] = ['submitted', 'under_review', 'needs_information', 'approved', 'rejected', 'closed']
 
 export default function ReviewQueuePage() {
   const [cases, setCases] = useState<CaseSummary[]>([])
-  const [status, setStatus] = useState<CaseStatus>('pending')
+  const [status, setStatus] = useState<CaseStatus>('submitted')
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(false)
 

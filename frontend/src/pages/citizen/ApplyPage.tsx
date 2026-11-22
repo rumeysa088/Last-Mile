@@ -91,7 +91,7 @@ export default function ApplyPage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const defaults = useCallback((): Answers => isHelper && active
-    ? { applicant_name: active.head_name, district: active.district, household_size: active.members_count }
+    ? { applicant_name: active.head_name, district: active.district || undefined, household_size: active.members_count || 1 }
     : { applicant_name: me?.full_name, household_size: 1 }, [isHelper, active, me])
 
   // load draft for THIS person + family only
@@ -147,7 +147,7 @@ export default function ApplyPage() {
     const label = payload.applicant_name
     try {
       if (!isOnline()) throw new TypeError('network offline')
-      const c = await casesApi.create(payload, idem)
+      const c = await casesApi.create(payload, idem, photo ? { quality: photo.q.quality } : null)
       await drafts.delete(key)
       let photoMsg: string | undefined
       if (photo) {
@@ -184,8 +184,8 @@ export default function ApplyPage() {
             <h1 className="text-2xl font-bold">{t('sent_title')}</h1>
             <div>
               <div className="text-ink-soft">{t('sent_ref')}</div>
-              <div className="latin text-3xl font-bold tracking-wider my-2" dir="ltr">{done.c.reference ? done.c.reference.split('').join(' ') : done.c.id.slice(0, 8).toUpperCase()}</div>
-              <ListenButton text={`${t('sent_ref')}: ${done.c.reference ? done.c.reference.split('').join(' ') : String(done.c.id).slice(0, 8)}`} />
+              <div className="latin text-3xl font-bold tracking-wider my-2" dir="ltr">{done.c.reference}</div>
+              <ListenButton text={`${t('sent_ref')}: ${done.c.reference.split('').join(' ')}`} />
             </div>
             {done.c.idempotent_replay && <Notice tone="info">{t('replay_note')}</Notice>}
             <p className="text-start">{done.c.user_explanation}</p>

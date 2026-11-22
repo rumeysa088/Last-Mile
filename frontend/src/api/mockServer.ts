@@ -214,7 +214,6 @@ function evaluate(db: DB, c: StoredCase) {
   c.route = route
   c.reasons = reasons
   c.missing_fields = missing
-  if (c.status === 'pending' || c.status === 'info_needed') c.status = route === 'more_info' ? 'info_needed' : 'pending'
   c.user_explanation =
     route === 'ready' ? 'Your answers fit the rules. An officer will give the final decision. Nothing is approved by the computer alone.'
       : route === 'more_info' ? 'We need a little more proof before an officer can decide. See what is missing below.'
@@ -229,8 +228,8 @@ function createCase(db: DB, input: CaseCreate, u: User, idemKey: string | null, 
   const by = u.role === 'community_helper' ? `helper: ${u.full_name}` : u.role === 'citizen' ? 'you' : 'officer'
   const c: StoredCase = {
     id: uuid(), reference: `LM-26-${String(db.seq).padStart(5, '0')}`, program_code: input.program_code, applicant_name: input.applicant_name,
-    family_id: input.family_id, status: 'pending', route: null, ai_confidence: null, user_explanation: '', reasons: [], missing_fields: [],
-    rule_version_id: rule.id, sources: [], history: [{ status: 'submitted', at, actor: by, note: u.role === 'community_helper' ? `Sent by ${u.full_name} for you.` : 'Application received.' }],
+    family_id: input.family_id, status: 'submitted', route: null, ai_confidence: null, user_explanation: '', reasons: [], missing_fields: [],
+    rule_version_id: rule.id, sources: [], history: [{ status: 'submitted' as const, at, actor: by, note: u.role === 'community_helper' ? `Sent by ${u.full_name} for you.` : 'Application received.' }],
     submitted_at: at, submitted_by: u.full_name, documents: [], input, idempotency_key: idemKey, doc_quality: null,
   }
   evaluate(db, c)
@@ -307,7 +306,7 @@ export const mock = {
     if (!/^03\d{2}-?\d{7}$/.test(input.phone)) problems.push('phone')
     if (!input.household_size || input.household_size < 1 || input.household_size > 30) problems.push('household_size')
     if (problems.length) { const e = err(422, 'VALIDATION_ERROR', `Please check: ${problems.join(', ')}.`); e.details = problems; throw e }
-    const open = db.cases.find(c => c.input.cnic === input.cnic && (c.status === 'pending' || c.status === 'info_needed'))
+    const open = db.cases.find(c => c.input.cnic === input.cnic && (c.status === 'submitted' || c.status === 'under_review' || c.status === 'needs_information'))
     if (open) { const e = err(409, 'DUPLICATE_APPLICATION', `An application with this CNIC is already open (${open.reference}).`); e.details = { reference: open.reference, id: open.id }; throw e }
     return publicCase(createCase(db, input, u, idemKey))
   }),
@@ -433,7 +432,7 @@ export const mock = {
     const db = load()
     const c = db.cases.find(x => x.id === caseId)
     if (!c) return null
-    const status: CaseStatus = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'info_needed'
+    const status: CaseStatus = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'needs_information'
     c.status = status
     c.history.push({ status, at: new Date().toISOString(), actor: 'officer', note:
       decision === 'approve' ? 'An officer checked and approved your application.' : decision === 'reject' ? `An officer did not approve it. Reason: ${reason}` : `An officer needs more information: ${reason}` })

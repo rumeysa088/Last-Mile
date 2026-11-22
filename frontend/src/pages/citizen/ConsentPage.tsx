@@ -2,7 +2,7 @@
 // what the server returned after the action, never an optimistic guess.
 import { Building2, HandHelping, Eye, ShieldOff, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { consentApi } from '../../api/consent'
+import { consentApi, SCOPE_OPTIONS, SCOPE_SINGLE } from '../../api/consent'
 import type { AccessEvent, Consent } from '../../api/types'
 import ListenButton from '../../components/ListenButton'
 import Notice from '../../components/Notice'
@@ -10,7 +10,6 @@ import Sheet from '../../components/Sheet'
 import { useI18n, type TKey } from '../../i18n'
 import { ApiError, isNetworkError } from '../../lib/errors'
 
-const ALL_SCOPES = ['name', 'cnic', 'phone', 'household', 'income', 'case_status', 'documents']
 
 export function actionLabel(a: string): TKey {
   if (a.startsWith('access_denied')) return 'act_access_denied'
@@ -23,7 +22,7 @@ export function actionLabel(a: string): TKey {
 export default function ConsentPage() {
   const { t, lang } = useI18n()
   const [items, setItems] = useState<Consent[] | null>(null)
-  const [log, setLog] = useState<AccessEvent[]>([])
+  const [log, setLog] = useState<AccessEvent[] | null>(null)
   const [confirm, setConfirm] = useState<Consent | null>(null)
   const [editing, setEditing] = useState<{ c: Consent; scope: string[] } | null>(null)
   const [msg, setMsg] = useState<{ tone: 'ok' | 'danger'; text: string } | null>(null)
@@ -84,7 +83,7 @@ export default function ConsentPage() {
                     <button className="btn-danger flex-1" disabled={busy} onClick={() => setConfirm(c)}><ShieldOff aria-hidden /> {t('consent_stop')}</button>
                     <button className="btn-quiet flex-1" disabled={busy} onClick={() => setEditing({ c, scope: c.data_scope })}><SlidersHorizontal aria-hidden /> {t('consent_change')}</button>
                   </> : (
-                    <button className="btn-primary flex-1" disabled={busy} onClick={() => act(() => consentApi.grant({ recipient_id: c.recipient_id, purpose: c.purpose, data_scope: c.data_scope, confirmed_by_citizen: true }))}>
+                    <button className="btn-primary flex-1" disabled={busy} onClick={() => act(() => consentApi.grant({ family_id: c.family_id, recipient_id: c.recipient_id, purpose: c.purpose, data_scope: c.data_scope, confirmed_by_citizen: true }))}>
                       <ShieldCheck aria-hidden /> {t('consent_again')}</button>
                   )}
                 </div>
@@ -94,7 +93,7 @@ export default function ConsentPage() {
         })}
       </ul>
 
-      <section className="slip p-5">
+      {log && <section className="slip p-5">
         <h2 className="font-bold mb-3 flex items-center gap-2"><Eye aria-hidden className="text-teal" /> {t('access_title')}</h2>
         {log.length === 0 ? <p className="text-ink-soft">{t('access_empty')}</p> : (
           <ul className="divide-y-2 divide-ink/5">
@@ -106,7 +105,7 @@ export default function ConsentPage() {
             ))}
           </ul>
         )}
-      </section>
+      </section>}
 
       <Sheet open={!!confirm} onClose={() => setConfirm(null)} title={t('consent_stop')}>
         <p className="mb-5">{confirm && t('consent_stop_confirm', { name: confirm.recipient_name })}</p>
@@ -119,16 +118,16 @@ export default function ConsentPage() {
       <Sheet open={!!editing} onClose={() => setEditing(null)} title={t('consent_change')}>
         {editing && (
           <div className="space-y-2 mb-5">
-            {ALL_SCOPES.map(s => (
+            {SCOPE_OPTIONS.map(s => (
               <label key={s} className="flex items-center gap-3 min-h-[52px] rounded-xl bg-white border-2 border-ink/10 px-4 cursor-pointer">
-                <input type="checkbox" className="w-6 h-6 accent-teal" checked={editing.scope.includes(s)}
-                  onChange={e => setEditing({ ...editing, scope: e.target.checked ? [...editing.scope, s] : editing.scope.filter(x => x !== s) })} />
+                <input type={SCOPE_SINGLE ? 'radio' : 'checkbox'} name="scope" className="w-6 h-6 accent-teal" checked={editing.scope.includes(s)}
+                  onChange={e => setEditing({ ...editing, scope: SCOPE_SINGLE ? [s] : e.target.checked ? [...editing.scope, s] : editing.scope.filter(x => x !== s) })} />
                 {t(`scope_${s}` as TKey)}
               </label>
             ))}
           </div>
         )}
-        <button className="btn-primary w-full" disabled={busy || !editing?.scope.length} onClick={() => editing && act(() => consentApi.updateScope(editing.c.id, editing.scope))}>{t('consent_save')}</button>
+        <button className="btn-primary w-full" disabled={busy || !editing?.scope.length} onClick={() => editing && act(() => consentApi.updateScope(editing.c, editing.scope))}>{t('consent_save')}</button>
       </Sheet>
     </div>
   )

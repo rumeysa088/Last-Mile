@@ -2,13 +2,20 @@
 import { HandHelping, ShieldQuestion, Store, Gavel, LogIn } from 'lucide-react'
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { USE_MOCK } from '../api/client'
 import { homeFor, useAuth } from '../auth/AuthProvider'
 import { Brand, LangToggle } from '../components/AppShell'
 import Notice from '../components/Notice'
 import { useI18n, type TKey } from '../i18n'
 import { ApiError, isNetworkError } from '../lib/errors'
 
-const PERSONAS: { email: string; name: string; key: TKey; Icon: typeof Store }[] = [
+// Mock mode: in-browser demo accounts. Real backend: our updated .com accounts.
+const PERSONAS: { email: string; name: string; key: TKey; Icon: typeof Store }[] = USE_MOCK ? [
+  { email: 'zainab@demo.lastmile', name: 'Zainab Bibi', key: 'persona_zainab', Icon: ShieldQuestion },
+  { email: 'imran@demo.lastmile', name: 'Imran Qureshi', key: 'persona_imran', Icon: Store },
+  { email: 'helper@demo.lastmile', name: 'Rukhsana Baloch', key: 'persona_helper', Icon: HandHelping },
+  { email: 'officer@demo.lastmile', name: 'Demo Officer', key: 'persona_officer', Icon: Gavel },
+] : [
   { email: 'citizen@lastmile.com', name: 'Zainab Bibi', key: 'persona_zainab', Icon: ShieldQuestion },
   { email: 'citizen@lastmile.com', name: 'Imran Qureshi', key: 'persona_imran', Icon: Store },
   { email: 'helper@lastmile.com', name: 'Rukhsana Baloch', key: 'persona_helper', Icon: HandHelping },
@@ -33,6 +40,13 @@ export default function LoginPage() {
   }
 
   const handlePersonaClick = (p: { email: string }) => {
+    if (USE_MOCK) {
+      // Use C's mock password for mock accounts
+      go(p.email, 'demo1234')
+      return
+    }
+    
+    // Use our real backend passwords
     let pass = 'CitizenPass123!'
     if (p.email.includes('helper')) pass = 'HelperPass123!'
     if (p.email.includes('officer')) pass = 'OfficerPass123!'

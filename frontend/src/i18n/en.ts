@@ -119,12 +119,12 @@ export const en = {
   // track
   track_title: 'My applications',
   track_empty: 'No applications yet.',
-  status_draft: 'Not sent yet',
-  status_pending: 'With an officer',
-  status_info_needed: 'More proof needed',
+  status_submitted: 'Sent, waiting for an officer',
+  status_under_review: 'An officer is checking',
+  status_needs_information: 'More proof needed',
   status_approved: 'Approved',
   status_rejected: 'Not approved',
-  status_submitted: 'Sent',
+  status_closed: 'Closed',
   status_document_added: 'Photo added',
   status_routed: 'Checked by the system',
   route_ready: 'Answers fit the rules. Waiting for officer.',
@@ -183,6 +183,7 @@ export const en = {
   access_empty: 'Nobody else has opened your data yet.',
   scope_name: 'Name', scope_cnic: 'CNIC number', scope_phone: 'Phone', scope_household: 'Home and family',
   scope_income: 'Income', scope_case_status: 'Application status', scope_documents: 'Documents',
+  scope_read_write: 'See and help with your application', scope_read_only: 'See only, cannot change anything',
   act_family_read: 'opened your family record', act_case_read: 'opened your application', act_case_create: 'sent an application',
   act_document_upload: 'added a document', act_access_denied: 'tried to open your data and was blocked', act_case_review: 'made a decision',
   act_case_route: 'checked your application', act_other: 'used your data',
@@ -214,6 +215,8 @@ export const en = {
   consent_script: 'I am {helper}, a community helper. May I see your name, CNIC, phone, family and income details to help you apply for relief? You can stop this at any time from your own phone.',
   consent_citizen_yes: '{name} says yes',
   access_blocked_title: 'Access stopped',
+  consent_blocked_body: '{name} has not given you permission, or took it back. You cannot see or change this family\'s data.',
+  consent_ask_family: 'Only the family can give permission. Ask {name} to open Last Mile on their own phone and tap Share again, or ask the relief officer to record it.',
 }
 export type Dict = typeof en
 export type TKey = keyof Dict
