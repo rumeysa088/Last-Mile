@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from app.models.family_assignment import FamilyAssignment
-from app.models.models import Case, Consent, Family
+from app.models.models import Case, Consent, Family, FamilyMember, User
 
 
 def get_token(client, email):
@@ -165,3 +165,123 @@ def test_helper_assisted_case_creation(client, db_session, test_users):
     )
     assert auth_resp.status_code == 201
     assert auth_resp.json()["title"] == "Authorized Assisted Case"
+
+
+def test_citizen_case_creation_validations_and_family_autolink(client, db_session, test_users):
+    """Verifies citizen case creation: auto-linking family, empty title validation, ownership enforcement."""
+    citizen_token = get_token(client, "citizen@test.com")
+    headers = auth_header(citizen_token)
+
+    # 1. Validation: Empty or whitespace title rejected with 422
+    empty_title_resp = client.post(
+        "/api/v1/cases/",
+        json={"title": "   ", "description": "No title"},
+        headers=headers,
+    )
+    assert empty_title_resp.status_code == 422
+    assert "Title cannot be empty" in empty_title_resp.json()["detail"]
+
+    # 2. Citizen creates family
+    family = Family(
+        tenant_id=test_users["tenant"].id,
+        created_by=test_users["citizen"].id,
+        name="Citizen Auto Family",
+    )
+    db_session.add(family)
+    db_session.commit()
+
+    # 3. Citizen submits application without family_id -> auto-links to their existing family
+    autolink_resp = client.post(
+        "/api/v1/cases/",
+        json={"title": "Heating Allowance Application", "description": "Auto-link test"},
+        headers=headers,
+    )
+    assert autolink_resp.status_code == 201
+    case_data = autolink_resp.json()
+    assert case_data["title"] == "Heating Allowance Application"
+    assert case_data["status"] == "submitted"
+    assert case_data["family_id"] == str(family.id)
+    assert case_data["created_by"] == str(test_users["citizen"].id)
+
+    # 4. Citizen creates another citizen's family and tries to submit -> 403 Forbidden
+    other_citizen = User(
+        tenant_id=test_users["tenant"].id,
+        email="other_citizen@test.com",
+        full_name="Other Citizen",
+        hashed_password="hash",
+        role="citizen",
+        is_active=True,
+    )
+    db_session.add(other_citizen)
+    db_session.flush()
+
+    other_family = Family(
+        tenant_id=test_users["tenant"].id,
+        created_by=other_citizen.id,
+        name="Other Family",
+    )
+    db_session.add(other_family)
+    db_session.commit()
+
+    cross_fam_resp = client.post(
+        "/api/v1/cases/",
+        json={"title": "Unauthorized Case", "family_id": str(other_family.id)},
+        headers=headers,
+    )
+    assert cross_fam_resp.status_code == 403
+    assert "You can only create cases for your own families" in cross_fam_resp.json()["detail"]
+
+    # 5. Citizen added as FamilyMember by another user CAN create case for that family
+    member_record = FamilyMember(
+        family_id=other_family.id,
+        user_id=test_users["citizen"].id,
+        full_name="Test Citizen",
+        relationship="Dependent",
+    )
+    db_session.add(member_record)
+    db_session.commit()
+
+    member_case_resp = client.post(
+        "/api/v1/cases/",
+        json={"title": "Family Member Application", "family_id": str(other_family.id)},
+        headers=headers,
+    )
+    assert member_case_resp.status_code == 201
+    assert member_case_resp.json()["family_id"] == str(other_family.id)
+
+
+def test_case_status_standardized_and_check_constraint(client, db_session, test_users):
+    """Verifies that case status is strictly standardized to 'submitted' and invalid statuses are rejected."""
+    citizen_token = get_token(client, "citizen@test.com")
+    headers = auth_header(citizen_token)
+
+    # 1. Citizen case creation ignores any extraneous client status and standardizes to 'submitted'
+    resp = client.post(
+        "/api/v1/cases/",
+        json={"title": "Standardized Status Case", "status": "pending"},
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "submitted"
+    case_id = resp.json()["id"]
+
+    # 2. Direct review with 'pending' status is rejected with 422
+    officer_token = get_token(client, "officer@test.com")
+    officer_headers = auth_header(officer_token)
+
+    review_pending = client.post(
+        f"/api/v1/cases/{case_id}/review",
+        json={"status": "pending"},
+        headers=officer_headers,
+    )
+    assert review_pending.status_code == 422
+    assert "Invalid case status 'pending'" in review_pending.json()["detail"]
+
+    # 3. Valid status transition submitted -> under_review succeeds
+    review_ok = client.post(
+        f"/api/v1/cases/{case_id}/review",
+        json={"status": "under_review"},
+        headers=officer_headers,
+    )
+    assert review_ok.status_code == 200
+    assert review_ok.json()["status"] == "under_review"

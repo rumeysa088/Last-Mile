@@ -49,7 +49,7 @@ All 4xx and 5xx responses strictly adhere to the Shared Team Integration Guide s
 **Request Body:**
 ```json
 {
-  "email": "citizen@lastmile.local",
+  "email": "citizen@lastmile.org",
   "password": "CitizenPass123!"
 }
 ```
@@ -70,7 +70,7 @@ Requires: Valid Bearer Token (Any authenticated user)
 ```json
 {
   "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "email": "citizen@lastmile.local",
+  "email": "citizen@lastmile.org",
   "full_name": "Fatima Bibi",
   "role": "citizen",
   "tenant_id": "8bb3858c-9c76-4d56-a188-75f84d651234",

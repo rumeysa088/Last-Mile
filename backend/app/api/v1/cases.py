@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user, require_roles
 from app.core.tenant import get_current_tenant
 from app.db.session import get_db
-from app.models.models import Case, User, Family, Consent
+from app.models.models import Case, User, Family, FamilyMember, Consent
 from app.models.family_assignment import FamilyAssignment
 from app.schemas.cases import CaseCreate, CaseUpdate, CaseResponse
 from app.services.audit import log_action
@@ -75,10 +75,20 @@ def verify_case_access(
 
     if user.role == "citizen":
         if family.created_by != user.id and case.created_by != user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You cannot access this family's cases",
+            is_member = (
+                db.query(FamilyMember)
+                .filter(
+                    FamilyMember.family_id == family.id,
+                    FamilyMember.user_id == user.id,
+                )
+                .first()
+                is not None
             )
+            if not is_member:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You cannot access this family's cases",
+                )
         return
 
     if user.role == "community_helper":
@@ -148,9 +158,42 @@ def create_case(
     current_user: User = Depends(get_current_user),
     tenant_id: UUID = Depends(get_current_tenant),
 ):
-    if data.family_id:
+    if not data.title or not data.title.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Title cannot be empty",
+        )
+
+    resolved_family_id = data.family_id
+
+    # If an authenticated citizen didn't specify a family, auto-link to their family if one exists
+    if resolved_family_id is None and current_user.role == "citizen":
+        citizen_family = (
+            db.query(Family)
+            .filter(
+                Family.tenant_id == tenant_id,
+                Family.created_by == current_user.id,
+            )
+            .first()
+        )
+        if citizen_family:
+            resolved_family_id = citizen_family.id
+        else:
+            citizen_member = (
+                db.query(FamilyMember)
+                .join(Family, FamilyMember.family_id == Family.id)
+                .filter(
+                    Family.tenant_id == tenant_id,
+                    FamilyMember.user_id == current_user.id,
+                )
+                .first()
+            )
+            if citizen_member:
+                resolved_family_id = citizen_member.family_id
+
+    if resolved_family_id:
         family = db.query(Family).filter(
-            Family.id == data.family_id,
+            Family.id == resolved_family_id,
             Family.tenant_id == tenant_id,
         ).first()
 
@@ -160,22 +203,33 @@ def create_case(
                 detail="Family not found",
             )
 
-        if current_user.role == "citizen" and family.created_by != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only create cases for your own families",
+        if current_user.role == "citizen":
+            is_owner = family.created_by == current_user.id
+            is_member = (
+                db.query(FamilyMember)
+                .filter(
+                    FamilyMember.family_id == family.id,
+                    FamilyMember.user_id == current_user.id,
+                )
+                .first()
+                is not None
             )
+            if not is_owner and not is_member:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only create cases for your own families",
+                )
 
         if current_user.role == "community_helper":
             # Assisted case creation requires active assignment and consent
             assignment = db.query(FamilyAssignment).filter(
-                FamilyAssignment.family_id == data.family_id,
+                FamilyAssignment.family_id == resolved_family_id,
                 FamilyAssignment.helper_id == current_user.id,
                 FamilyAssignment.is_active.is_(True),
             ).first()
 
             consent = db.query(Consent).filter(
-                Consent.family_id == data.family_id,
+                Consent.family_id == resolved_family_id,
                 Consent.status == "active",
                 Consent.withdrawn_at.is_(None),
                 (Consent.recipient_id == current_user.id) | (Consent.recipient_id.is_(None)),
@@ -201,9 +255,9 @@ def create_case(
 
     case = Case(
         tenant_id=tenant_id,
-        family_id=data.family_id,
+        family_id=resolved_family_id,
         created_by=current_user.id,
-        title=data.title,
+        title=data.title.strip(),
         description=data.description,
         status="submitted",
     )
@@ -244,14 +298,17 @@ def list_cases(
         query = query.filter(Case.status == status_filter)
 
     if current_user.role == "citizen":
-        owned_family_ids = select(Family.id).filter(
+        member_family_ids = select(FamilyMember.family_id).filter(
+            FamilyMember.user_id == current_user.id
+        )
+        owned_or_member_family_ids = select(Family.id).filter(
             Family.tenant_id == tenant_id,
-            Family.created_by == current_user.id,
+            (Family.created_by == current_user.id) | (Family.id.in_(member_family_ids)),
         )
 
         query = query.filter(
             (Case.created_by == current_user.id)
-            | (Case.family_id.in_(owned_family_ids))
+            | (Case.family_id.in_(owned_or_member_family_ids))
         )
 
     elif current_user.role == "community_helper":

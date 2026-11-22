@@ -90,9 +90,9 @@ The synthetic seed script generates the following test personas:
 
 | Persona | Email | Password | Role | Responsibilities |
 |---|---|---|---|---|
-| **Citizen** | `citizen@lastmile.local` | `CitizenPass123!` | `citizen` | Submits applications, uploads documents, grants consent |
-| **Community Helper** | `helper@lastmile.local` | `HelperPass123!` | `community_helper` | Assisted applications, family support under active consent |
-| **Officer Admin** | `officer@lastmile.local` | `OfficerPass123!` | `officer_admin` | Case decisions with reasons, versioned rules, audit logs |
+| **Citizen** | `citizen@lastmile.org` | `CitizenPass123!` | `citizen` | Submits applications, uploads documents, grants consent |
+| **Community Helper** | `helper@lastmile.org` | `HelperPass123!` | `community_helper` | Assisted applications, family support under active consent |
+| **Officer Admin** | `officer@lastmile.org` | `OfficerPass123!` | `officer_admin` | Case decisions with reasons, versioned rules, audit logs |
 
 ---
 
