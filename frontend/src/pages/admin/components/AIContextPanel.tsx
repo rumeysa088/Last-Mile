@@ -23,13 +23,13 @@ export default function AIContextPanel({ detail }: { detail: CaseDetail }) {
           </div>
         </>
       )}
-      {detail.missing_fields.length > 0 && (
+      {detail.missing_fields && detail.missing_fields.length > 0 && (
         <div>
           <div className="text-sm font-medium text-amber-700">Missing fields</div>
           <div className="text-sm">{detail.missing_fields.join(', ')}</div>
         </div>
       )}
-      {detail.ocr_warnings.length > 0 && (
+      {detail.ocr_warnings && detail.ocr_warnings.length > 0 && (
         <div>
           <div className="text-sm font-medium text-amber-700">OCR warnings</div>
           <ul className="list-disc list-inside text-sm">{detail.ocr_warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>

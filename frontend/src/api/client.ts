@@ -138,15 +138,18 @@ export const api = {
     return http<CaseDetail>(`/cases/${id}`)
   },
 
-  reviewCase: (id: string, decision: 'approve' | 'reject' | 'request_info', reason: string) => {
+    reviewCase: (id: string, decision: 'approve' | 'reject' | 'request_info', reason: string) => {
     if (USE_MOCK) {
       const shared = mock.officerReview(id, decision, reason)
       if (shared) return Promise.resolve(shared)
+      return Promise.resolve({ id, status: decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'info_needed', reason })
     }
-    if (USE_MOCK) return Promise.resolve({ id, status: decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'info_needed', reason })
     return http<{ id: string; status: CaseStatus; reason: string }>(`/cases/${id}/review`, {
       method: 'POST',
-      body: JSON.stringify({ decision, reason }),
+      body: JSON.stringify({ 
+        status: decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'info_needed', 
+        reason 
+      })
     })
   },
 
