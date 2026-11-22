@@ -2,7 +2,10 @@
 // We are honest when a language is not available instead of pretending.
 
 type Lang = 'en' | 'ur'
-const TTS_LANG: Record<Lang, string[]> = { ur: ['ur-PK', 'ur-IN', 'ur'], en: ['en-PK', 'en-IN', 'en-GB', 'en-US', 'en'] }
+const TTS_LANG: Record<Lang, string[]> = { 
+  ur: ['ur-PK', 'ur-IN', 'ur', 'hi-IN', 'hi'], // Added Hindi fallback
+  en: ['en-PK', 'en-IN', 'en-GB', 'en-US', 'en'] 
+}
 
 export const ttsSupported = () => typeof window !== 'undefined' && 'speechSynthesis' in window
 
@@ -48,6 +51,7 @@ export function listen(lang: Lang, onText: (text: string, confidence: number) =>
   const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition
   if (!Ctor) { onError('unsupported'); return () => {} }
   const r = new Ctor()
+    // Fallback to hi-IN if ur-PK fails (Hindi understands Urdu natively in Chrome)
   r.lang = lang === 'ur' ? 'ur-PK' : 'en-PK'
   r.interimResults = false
   r.maxAlternatives = 1
