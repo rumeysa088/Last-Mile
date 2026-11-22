@@ -258,12 +258,24 @@ async function transport<T>(write: boolean, fn: () => T): Promise<T> {
   return JSON.parse(JSON.stringify(out)) as T
 }
 
+const TEST_ACCOUNT_PASSWORD = 'TestPassword123!'
+const TEST_ACCOUNT_ALIASES: Record<string, string> = {
+  'citizen@test.com': 'zainab@demo.lastmile',
+  'helper@test.com': 'helper@demo.lastmile',
+  'officer@test.com': 'officer@demo.lastmile',
+}
+
 // ---------------- endpoints ----------------
 export const mock = {
   login: (email: string, password: string) => transport(false, () => {
     const db = load()
-    const u = db.users.find(x => x.email === email.trim().toLowerCase())
-    if (!u || u.password !== password) throw err(401, 'INVALID_CREDENTIALS', 'Email or password is wrong.')
+    const typed = email.trim().toLowerCase()
+    // The team's real test accounts (backend/scripts/create_test_user.py) also work in demo mode,
+    // so the same logins work on the demo site and on the real backend.
+    const alias = TEST_ACCOUNT_ALIASES[typed]
+    const u = db.users.find(x => x.email === (alias ?? typed))
+    const ok = !!u && (u.password === password || (!!alias && password === TEST_ACCOUNT_PASSWORD))
+    if (!ok) throw err(401, 'INVALID_CREDENTIALS', 'Email or password is wrong.')
     audit(db, u, 'auth.login', u.id, u.family_id ?? null)
     return { access_token: `mock.${u.id}`, token_type: 'bearer' }
   }),

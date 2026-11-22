@@ -31,7 +31,9 @@ def test_scam_check_suspicious_message_and_audit(client, db_session, test_users)
     data = response.json()
     assert data["result"] == "suspicious"
     assert data["confidence"] >= 0.8
-    assert "otp" in data["evidence"] or "bank account" in data["evidence"] or "won" in data["evidence"]
+    # Member B's classifier names the signal, not the raw keyword
+    assert "requests sensitive credential (PIN/OTP/password/CNIC)" in data["evidence"]
+    assert data["safe_next_steps"], "suspicious results must tell the citizen what to do"
     assert data["model_version"] is not None
 
     # Verify audit log
@@ -55,7 +57,9 @@ def test_scam_check_legitimate_message(client, test_users):
     assert response.status_code == 200
     data = response.json()
     assert data["result"] == "likely_legitimate"
-    assert data["confidence"] > 0.7
+    # B caps "legitimate" at 0.6 on purpose: no warning signs is not proof (docs/DECISIONS.md)
+    assert 0.5 <= data["confidence"] <= 0.7
+    assert data["safe_next_steps"]
 
 
 def test_scam_check_ambiguous_short_message(client, test_users):

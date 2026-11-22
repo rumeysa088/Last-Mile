@@ -5,10 +5,22 @@
 export interface Signal { label: string; weight: number; patterns: RegExp[] }
 
 export const SIGNALS: Signal[] = [
+  // Updated with B's false-alarm fix (7de1d85): a credential or money word only counts
+  // when someone ASKS for it ("send your OTP", "pay Rs 500"), not in receipts or "do not share your OTP".
   { label: 'requests sensitive credential (PIN/OTP/password/CNIC)', weight: 3,
-    patterns: [/\bpin\b/i, /\botp\b/i, /password/i, /\bcvv\b/i, /شناختی/, /پن(?![؀-ۿ])/, /(send|share|reply|give).{0,25}\bcnic\b/i] },
+    patterns: [
+      /\b(send|share|reply|give|enter|provide|submit|tell|bhej\w*|bata\w*|dein)\b.{0,30}\b(pin|otp|password|cvv|cnic)\b/i,
+      /\b(pin|otp|password|cvv|cnic)\b.{0,12}\b(bhej\w*|bata\w*|send|dein)\b/i,
+      /(پن|شناختی|پاس ورڈ).{0,20}(بھیج|بتا|شیئر)/,
+    ] },
   { label: 'asks for a fee or money transfer', weight: 3,
-    patterns: [/processing fee/i, /(send|pay|transfer|deposit).{0,30}(rs\.?|pkr|fee|charges|amount)/i, /(jazzcash|easypaisa).{0,25}(send|transfer|pay)/i] },
+    patterns: [
+      /processing fee/i,
+      /\b(send|pay|deposit)\s+(us\s+)?(rs\.?|pkr)\s*\d/i,
+      /\b(send|pay|deposit)\b.{0,15}\b(fee|charges)\b/i,
+      /(jazzcash|easypaisa).{0,25}\bsend\b/i,
+      /\bsend\b.{0,25}(jazzcash|easypaisa)/i,
+    ] },
   { label: 'uses a shortened link', weight: 2, patterns: [/bit\.ly/i, /tinyurl/i, /cutt\.ly/i, /rb\.gy/i, /\bt\.co\//i] },
   { label: 'contains a link', weight: 1, patterns: [/https?:\/\//i, /www\./i] },
   { label: 'creates urgency or threat', weight: 1,

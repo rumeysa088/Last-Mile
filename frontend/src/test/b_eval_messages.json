@@ -1,0 +1,212 @@
+[
+ {
+  "text": "URGENT: your relief payment is ready. Send your CNIC and PIN to claim now http://bit.ly/x",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "uses a shortened link",
+   "contains a link",
+   "creates urgency or threat",
+   "promises relief money or a prize"
+  ]
+ },
+ {
+  "text": "Congratulations you won! Pay Rs 500 processing fee via JazzCash to claim your prize",
+  "py": "suspicious",
+  "evidence": [
+   "asks for a fee or money transfer",
+   "promises relief money or a prize"
+  ]
+ },
+ {
+  "text": "Share your OTP immediately or your account will be blocked",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "creates urgency or threat"
+  ]
+ },
+ {
+  "text": "Aap ka inaam nikla hai, foran PIN bhejein",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "creates urgency or threat",
+   "promises relief money or a prize"
+  ]
+ },
+ {
+  "text": "BISP relief amount approved. Click http://bit.ly/bisp-claim and enter your CNIC and password",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "uses a shortened link",
+   "contains a link",
+   "promises relief money or a prize"
+  ]
+ },
+ {
+  "text": "Dear customer your Easypaisa account is suspended. Send OTP now to reactivate",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "asks for a fee or money transfer",
+   "creates urgency or threat"
+  ]
+ },
+ {
+  "text": "Aap ko Rs 25000 relief fund mila hai. Processing fee Rs 300 JazzCash par send karein",
+  "py": "suspicious",
+  "evidence": [
+   "asks for a fee or money transfer",
+   "promises relief money or a prize"
+  ]
+ },
+ {
+  "text": "Lucky draw winner! Reply with your CNIC and pay Rs 200 fee to receive your prize",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "asks for a fee or money transfer",
+   "promises relief money or a prize"
+  ]
+ },
+ {
+  "text": "Your SIM will be blocked within 2 hours. Share your CNIC and OTP to verify",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "creates urgency or threat"
+  ]
+ },
+ {
+  "text": "Ehsaas program: claim your payment at tinyurl.com/ehsaas26 and send your PIN",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "uses a shortened link",
+   "promises relief money or a prize"
+  ]
+ },
+ {
+  "text": "فوری: اپنا پن بھیجیں ورنہ آپ کا اکاؤنٹ بند ہو جائے گا",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "creates urgency or threat"
+  ]
+ },
+ {
+  "text": "Bank alert: send your password to this number immediately",
+  "py": "suspicious",
+  "evidence": [
+   "requests sensitive credential (PIN/OTP/password/CNIC)",
+   "creates urgency or threat"
+  ]
+ },
+ {
+  "text": "Your clinic appointment is on Monday at 10am. Reply YES to confirm.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Your electricity bill for October has been generated.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Meeting moved to 3pm tomorrow in the library.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Your parcel has been delivered. Thank you for shopping with us.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Happy birthday! Wishing you a great year ahead.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Class cancelled today due to rain. Notes will be shared later.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Aap ka bill jama ho gaya hai. Shukriya.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Your Raast transfer of Rs 5000 to Ali was successful.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Salary of Rs 60000 has been credited to your account ending 4417.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Reminder: submit your assignment by Friday. Check the portal https://flex.nu.edu.pk",
+  "py": "unknown",
+  "evidence": [
+   "contains a link"
+  ]
+ },
+ {
+  "text": "Your OTP is 482913. Do not share it with anyone.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Your payment of Rs 1200 for the electricity bill was received.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Mama ne kaha ke aaj raat khana ghar par hai.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Tomorrow's exam is at 9am in room 12.",
+  "py": "likely_legitimate",
+  "evidence": []
+ },
+ {
+  "text": "Please call back urgent",
+  "py": "unknown",
+  "evidence": [
+   "creates urgency or threat"
+  ]
+ },
+ {
+  "text": "ok",
+  "py": "unknown",
+  "evidence": []
+ },
+ {
+  "text": "Your account has been blocked. Visit your branch.",
+  "py": "unknown",
+  "evidence": [
+   "creates urgency or threat"
+  ]
+ },
+ {
+  "text": "Click here to see your results https://example.com/results",
+  "py": "unknown",
+  "evidence": [
+   "contains a link"
+  ]
+ },
+ {
+  "text": "Immediately reply with your name",
+  "py": "unknown",
+  "evidence": [
+   "creates urgency or threat"
+  ]
+ }
+]

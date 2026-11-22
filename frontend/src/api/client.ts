@@ -1,5 +1,8 @@
 // frontend/src/api/client.ts
 // Shared HTTP client. Coordinates with C.
+// C additions: exported http() with Idempotency-Key + NetworkError, Me type, and D's mocks now
+// read/write the shared mock DB (mockServer.ts) so citizen cases reach the officer queue and
+// published rules drive new citizen cases. Officer UI code is unchanged.
 import { ApiError, NetworkError } from '../lib/errors'
 import { getNetMode, sleep } from '../lib/net'
 import { mockDb, mock, type MockRule } from './mockServer'
@@ -10,6 +13,7 @@ export type { CaseStatus }
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
 export const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? 'true') === 'true'
+
 
 export interface CaseSummary {
   id: string
@@ -53,25 +57,23 @@ export async function http<T>(path: string, init: RequestInit & { idempotencyKey
   const token = getToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (init.idempotencyKey) headers.set('Idempotency-Key', init.idempotencyKey)
-  
+  // "Test signal" simulator also applies to the real backend, so the demo works on any network.
   const mode = getNetMode()
   if (mode === 'offline') throw new NetworkError()
   if (mode === 'slow') await sleep(2200)
-  
   let res: Response
   try {
     res = await fetch(`${BASE}${path}`, { ...init, headers })
   } catch {
     throw new NetworkError()
   }
-  
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     const msg = body?.error?.message ?? (typeof body?.detail === 'string' ? body.detail : null) ?? `HTTP ${res.status}`
     throw new ApiError(res.status, body?.error?.code ?? body?.code ?? `HTTP_${res.status}`, msg, body?.error?.details ?? body?.details)
   }
-  
   const data = (await res.json()) as T
+  // 'flaky': the server saved it but the reply is lost. Proves retries do not create duplicates.
   if (mode === 'flaky' && (init.method ?? 'GET') !== 'GET' && Math.random() < 0.5) throw new NetworkError('Connection dropped before the reply arrived')
   return data
 }
@@ -82,11 +84,11 @@ const MOCK_CASES: CaseSummary[] = [
   { id: 'c-002', citizen_name: 'Muhammad Ali', program_code: 'BISP-2026', status: 'submitted', route: 'more_info',    ai_confidence: 0.41, submitted_at: '2026-11-21T09:30:00Z', tenant_id: 't-punjab' },
   { id: 'c-003', citizen_name: 'Fatima Khan',  program_code: 'BISP-2026', status: 'submitted', route: 'ready',         ai_confidence: 0.91, submitted_at: '2026-11-21T08:15:00Z', tenant_id: 't-punjab' },
 ]
+// Rules live in the shared mock DB so a rule published here is used by the next citizen case.
 const rulesStore = () => mockDb().rules as unknown as RuleVersion[]
 const persist = () => { try { localStorage.setItem('lm_mockdb_v2', JSON.stringify(mockDb())) } catch { /* ignore */ } }
 const MOCK_RULES = { find: (f: (r: RuleVersion) => boolean) => rulesStore().find(f), filter: (f: (r: RuleVersion) => boolean) => rulesStore().filter(f) }
-
-// C's Real backend case logic
+// Real backend case -> officer queue row / detail (structured application lives in description)
 function backendSummary(c: BackendCase): CaseSummary {
   const x = toCitizenCase(c)
   return { id: c.id, citizen_name: x.applicant_name, program_code: x.program_code, status: c.status, route: x.route,
@@ -110,6 +112,7 @@ async function backendDetail(id: string): Promise<CaseDetail> {
 }
 const DECISION_STATUS = { approve: 'approved', reject: 'rejected', request_info: 'needs_information' } as const
 
+// Citizen/helper cases from the shared mock DB, shaped for the officer queue
 function citizenCases(): CaseSummary[] {
   return mockDb().cases.map(c => ({ id: c.id, citizen_name: c.applicant_name, program_code: c.program_code, status: c.status, route: c.route,
     ai_confidence: c.ai_confidence, submitted_at: c.submitted_at, tenant_id: 't-sindh-relief' }))
@@ -125,23 +128,6 @@ function citizenDetail(id: string): CaseDetail | null {
 
 // ---------- PUBLIC API ----------
 export const api = {
-  login: (email: string, password: string): Promise<{ access_token: string }> => {
-    if (USE_MOCK) {
-      const token = "mock-token-" + email;
-      localStorage.setItem('access_token', token);
-      return Promise.resolve({ access_token: token });
-    }
-    
-    // SENDING JSON, as A's Swagger requires
-    return http<{ access_token: string }>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: email, password: password }),
-    }).then(data => {
-      localStorage.setItem('access_token', data.access_token);
-      return data;
-    });
-  },
-
   me: () =>
     USE_MOCK
       ? mock.me(getToken())
@@ -190,7 +176,7 @@ export const api = {
       if (shared) return Promise.resolve(shared)
     }
     if (USE_MOCK) return Promise.resolve({ id, status: DECISION_STATUS[decision] as CaseStatus, reason })
-    
+    // A's API: POST /cases/{id}/review { status, reason }; reason is required for high-impact statuses
     return http<BackendCase>(`/cases/${id}/review`, {
       method: 'POST',
       body: JSON.stringify({ status: DECISION_STATUS[decision], reason }),

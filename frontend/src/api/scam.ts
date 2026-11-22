@@ -3,5 +3,6 @@ import { mock } from './mockServer'
 import { realScam } from './real'
 
 export const scamApi = {
-  check: (text: string, language: 'en' | 'ur') => (USE_MOCK ? mock.scamCheck(getToken(), text) : realScam.check(text, language)),
+  /** A's API expects { message, language } (backend/app/schemas/scam.py ScamCheckRequest). */
+  check: (message: string, language: 'en' | 'ur') => (USE_MOCK ? mock.scamCheck(getToken(), message) : realScam.check(message, language)),
 }

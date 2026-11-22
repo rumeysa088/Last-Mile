@@ -19,6 +19,17 @@ const body = (o: Partial<CaseCreate> = {}): CaseCreate => ({
 
 beforeEach(() => { localStorage.clear(); setNetMode('online'); resetMockDb() })
 
+describe('demo-mode login', () => {
+  it('accepts the team test accounts and the demo accounts, rejects wrong passwords', async () => {
+    for (const [e, pw] of [['citizen@test.com', 'TestPassword123!'], ['helper@test.com', 'TestPassword123!'], ['officer@test.com', 'TestPassword123!'],
+      [' Citizen@Test.com ', 'TestPassword123!'], ['zainab@demo.lastmile', 'demo1234'], ['helper@test.com', 'demo1234']])
+      await expect(mock.login(e, pw)).resolves.toHaveProperty('access_token')
+    expect((await mock.login('helper@test.com', 'TestPassword123!')).access_token).toBe('mock.u-rukhsana')
+    await expect(mock.login('citizen@test.com', 'wrong')).rejects.toMatchObject({ status: 401 })
+    await expect(mock.login('nobody@test.com', 'TestPassword123!')).rejects.toMatchObject({ status: 401 })
+  })
+})
+
 describe('bad data: names', () => {
   it('normalizes Muhammad spellings to one token', () => {
     expect(normalizeName('Mohammad Aslam')).toEqual(normalizeName('Muhammed  aslam'))

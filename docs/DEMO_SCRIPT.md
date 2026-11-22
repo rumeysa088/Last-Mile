@@ -42,3 +42,10 @@
 - Forged-document detection is out of scope; OCR inconsistencies are flagged for review, not judged.
 - Urdu TTS depends on the browser voice available.
 '@ | Set-Content -Encoding UTF8 docs\DEMO_SCRIPT.md
+
+## 3 min script
+- Minute 1 (Citizen): "I am a widow. I use the voice feature to apply for relief. The system uses OCR to read my ID. The AI classifies my case as low-confidence, so it routes it to a human."
+
+- Minute 2 (Officer): "I am the Officer. I log in. I see her case. The AI gives me the summary and missing fields. I click Approve, and it's recorded in the audit log."
+
+- Minute 3 (Rules): "I go to the Rule Editor. I change the eligibility income threshold from 50k to 45k. This takes effect immediately, and the system tracks which rule version was used for every decision."

@@ -131,10 +131,10 @@ export interface BackendConsent {
   id: string; family_id: string; granted_by: string; subject_id: string | null; recipient_id: string | null
   purpose: string | null; scope: string; status: 'active' | 'withdrawn' | 'expired'; granted_at: string; withdrawn_at: string | null
 }
-export interface BackendDocument { id: string; case_id: string; uploaded_by: string; filename: string; content_type: string | null; created_at: string }
+export interface BackendDocument { id: string; case_id: string; uploaded_by: string; filename: string; content_type: string | null; created_at: string; ocr?: OCRResult | null }
 export interface BackendEvaluation {
   id: string; rule_version_id: string; case_id: string | null; input_snapshot: Record<string, unknown>
   result: { rule_set_id?: string; rule_version?: number; breakdown?: { field: string; operator: string; expected: unknown; actual: unknown; status: string; message: string }[] }
   missing_fields: string[]; outcome: 'eligible' | 'ineligible' | 'unknown'; evaluated_at: string
 }
-export interface BackendScam { result: Verdict; confidence: number; explanation: string; evidence: string[]; sources: string[]; model_version: string; requires_human_review: boolean }
+export interface BackendScam { result: Verdict; confidence: number; explanation: string; evidence: string[]; safe_next_steps?: string[]; sources: (string | Source)[]; model_version: string; requires_human_review: boolean }

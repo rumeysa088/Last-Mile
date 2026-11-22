@@ -1,5 +1,7 @@
 # DEPLOYMENT — Last Mile
+Frontend (Local): http://localhost:5173
 
+Backend (Local): http://localhost:8000
 Status: **draft** — some sections depend on A (backend) and C (frontend scaffold) landing first.
 
 > Prototype only. Not an official government service. All data is synthetic.
