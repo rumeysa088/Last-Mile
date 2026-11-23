@@ -1,9 +1,10 @@
 // Browser text-to-speech and speech-to-text. Free, on-device where the phone supports it.
 // We are honest when a language is not available instead of pretending.
+export type VoiceMode = 'voice' | 'text' | 'auto' | 'urdu_via_hindi' | 'urdu_via_english';
 
 type Lang = 'en' | 'ur'
 const TTS_LANG: Record<Lang, string[]> = { 
-  ur: ['ur-PK', 'ur-IN', 'ur', 'hi-IN', 'hi'], // Added Hindi fallback
+  ur: ['ur-PK', 'ur-IN', 'ur', 'hi-IN', 'hi'], 
   en: ['en-PK', 'en-IN', 'en-GB', 'en-US', 'en'] 
 }
 
@@ -18,20 +19,29 @@ function pickVoice(lang: Lang): SpeechSynthesisVoice | null {
   return null
 }
 
-/** Speak text. Returns false if no voice for that language exists (caller can tell the user). */
-export function speak(text: string, lang: Lang, onEnd?: () => void): boolean {
-  if (!ttsSupported()) return false
+/** Speak text. Returns the VoiceMode used, or null if unsupported. */
+export function speak(text: string, lang: Lang, onEnd?: () => void): VoiceMode | null {
+  if (!ttsSupported()) return null
+  
   window.speechSynthesis.cancel()
   const u = new SpeechSynthesisUtterance(text)
   const v = pickVoice(lang)
+  
   if (v) u.voice = v
   u.lang = v?.lang ?? (lang === 'ur' ? 'ur-PK' : 'en-US')
   u.rate = 0.9
   u.onend = () => onEnd?.()
   u.onerror = () => onEnd?.()
+  
   window.speechSynthesis.speak(u)
-  return lang === 'en' || !!v
+
+  // Return the mode based on which voice was actually used
+  if (!v) return 'auto'
+  if (lang === 'ur' && v.lang.startsWith('hi')) return 'urdu_via_hindi'
+  if (lang === 'ur' && v.lang.startsWith('en')) return 'urdu_via_english'
+  return 'voice'
 }
+
 export function stopSpeaking() { if (ttsSupported()) window.speechSynthesis.cancel() }
 export function hasUrduVoice() { return ttsSupported() && !!pickVoice('ur') }
 
@@ -51,7 +61,6 @@ export function listen(lang: Lang, onText: (text: string, confidence: number) =>
   const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition
   if (!Ctor) { onError('unsupported'); return () => {} }
   const r = new Ctor()
-    // Fallback to hi-IN if ur-PK fails (Hindi understands Urdu natively in Chrome)
   r.lang = lang === 'ur' ? 'ur-PK' : 'en-PK'
   r.interimResults = false
   r.maxAlternatives = 1

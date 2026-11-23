@@ -1,6 +1,3 @@
-
-
-
 import os
 from uuid import uuid4
 
@@ -30,21 +27,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Register CORS middleware for frontend development
-# Deployed frontends: set CORS_ORIGINS="https://your-app.vercel.app" on Render (comma-separated).
-# CORS_ORIGIN_REGEX defaults to this project's Vercel preview URLs.
-_extra_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
-
+# Register CORS middleware (Allow all for hackathon demo)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        *_extra_origins,
-    ],
-    allow_origin_regex=os.getenv("CORS_ORIGIN_REGEX", r"https://last-mile[a-z0-9-]*\.vercel\.app"),
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

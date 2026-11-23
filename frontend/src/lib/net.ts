@@ -7,21 +7,21 @@ type Listener = (m: NetMode) => void
 const listeners = new Set<Listener>()
 
 export function getNetMode(): NetMode {
-  try {
-    const m = localStorage.getItem(KEY) as NetMode | null
-    if (m) return m
-  } catch { /* storage blocked */ }
+  // HACKATHON HACK: Return 'online' always so mobile browsers don't block the demo
   return 'online'
 }
+
 export function setNetMode(m: NetMode) {
   try { localStorage.setItem(KEY, m) } catch { /* ignore */ }
   listeners.forEach(l => l(m))
 }
+
 export function onNetMode(l: Listener) { listeners.add(l); return () => { listeners.delete(l) } }
 
 /** Effective connectivity: real browser state AND the simulator. */
 export function isOnline(): boolean {
-  const real = typeof navigator === 'undefined' ? true : navigator.onLine
-  return real && getNetMode() !== 'offline'
+  // HACKATHON HACK: Force true so the login page always attempts to connect
+  return true
 }
+
 export const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
